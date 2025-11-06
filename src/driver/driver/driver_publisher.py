@@ -32,7 +32,7 @@ class DrivePublisher(Node):
         start = time.time()
         while time.time() - start < duration:
             self.publisher.publish(msg)
-            self.publisher.sleep(
+            time.sleep(
                 0.05
             )  # wait 5 ms before asking the robot to turn again
 
@@ -43,5 +43,5 @@ class DrivePublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
     drive_publisher = DrivePublisher()
-    turn(math.pi, 1)
+    drive_publisher.turn(math.pi, 1.0)
     rclpy.shutdown()

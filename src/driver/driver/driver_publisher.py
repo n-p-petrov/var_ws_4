@@ -50,7 +50,7 @@ class DrivePublisher(Node):
         msg = Twist()
         msg.linear.x = speed
 
-        self.get_logger().info(f"Moving forward for {duration} sec with {radians_per_sec} rad/sec.")
+        self.get_logger().info(f"Moving forward for {duration} sec with {speed} rad/sec.")
 
         start = time.time()
         while time.time() - start < duration:

@@ -8,6 +8,8 @@ import rclpy
 from driver.driver_publisher import DrivePublisher
 from geometry_msgs.msg import Twist
 from image_subscriber.image_subscriber import ImageSubscriber
+from rclpy.node import Node
+from sensor_msgs.msg import JointState
 
 from .hough_tools import *
 
@@ -58,10 +60,31 @@ def follow_line(drive_publisher, rgb_image):
     drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)
 
 
+def set_camera_joint_once():
+    """
+    Publish a one-time joint command to rotate camera 90 degrees up.
+    """
+    node = rclpy.create_node("joint_publisher_once")
+    publisher = node.create_publisher(JointState, "/ugv/joint_states", 10)
+
+    joint_msg = JointState()
+    joint_msg.header.stamp = node.get_clock().now().to_msg()
+
+    joint_msg.name = ["pt_base_link_to_pt_link1", "pt_link1_to_pt_link2"]
+    joint_msg.position = [0.0, math.pi / 2]
+
+    publisher.publish(joint_msg)
+    rclpy.spin_once(node, timeout_sec=0.1)
+    node.destroy_node()
+
+
 def main(args=None):
     rclpy.init(args=args)
     print("Initializing the drive publisher...")
     drive_publisher = DrivePublisher()
+
+    print("Setting camera orientation...")
+    set_camera_joint_once()
 
     try:
         print("Initializing the image subscriber...")

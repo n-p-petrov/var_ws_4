@@ -5,10 +5,10 @@ import rclpy
 from driver.driver_publisher import DrivePublisher
 from image_subscriber.image_subscriber import ImageSubscriber
 
-LINEAR_VELOCITY = 0.2
+LINEAR_VELOCITY = 0.4
 DURATION_LINEAR_MOVE = 1  # seconds
 
-ANGULAR_VELOCITY = math.pi / 4  # radians per second
+ANGULAR_VELOCITY = math.pi  # radians per second
 PARALLEL_ERROR = (
     math.pi / 180 * 5
 )  # don't correct direction of movement if we are within this error
@@ -35,16 +35,13 @@ def follow_line(drive_publisher, rgb_image):
 
     # face direction of line
     rho, theta = closest_line[0], closest_line[1]
-    if theta > PARALLEL_ERROR:
+    print(theta, PARALLEL_ERROR)
+    if abs(theta) > PARALLEL_ERROR:
         # if we are not headed in the right direction correct it
-        drive_publisher.move(0.0, ANGULAR_VELOCITY, thetha / ANGULAR_VELOCITY)
+        drive_publisher.move(0.0, ANGULAR_VELOCITY, theta / ANGULAR_VELOCITY)
     else:
         # otherwise just move forward
-        drive_publsher.move(LINEAR_VELOCITY, 0.0, DURATION_LINEAR_MOVE)
-
-    # move along line
-    drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)
-
+        drive_publisher.move(LINEAR_VELOCITY, 0.0, DURATION_LINEAR_MOVE)
 
 def main(args=None):
     rclpy.init(args=args)

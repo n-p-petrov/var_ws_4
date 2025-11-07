@@ -34,21 +34,13 @@ class DrivePublisher(Node):
     def _publish_twist(self, lin_vel, ang_vel, duration, start_time):
         elapsed = time.time() - start_time
 
-        if elapsed < duration:
-            msg = Twist()
-            msg.linear.x = lin_vel
-            msg.angular.z = ang_vel
-            self.publisher.publish(msg)
-        else:
-            # stop the robot
-            self.publisher.publish(Twist())
-            self.timer.cancel()
-            self.get_logger().info("Movement completed.")
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    drive_publisher = DrivePublisher()
-    drive_publisher.turn(math.pi, 1.0)
-    drive_publisher.move_forward(2, 2 * math.pi)
-    rclpy.shutdown()
+#        if elapsed < duration:
+        msg = Twist()
+        msg.linear.x = lin_vel
+        msg.angular.z = ang_vel
+        self.publisher.publish(msg)
+#        else:
+#            # stop the robot
+#            self.publisher.publish(Twist())
+#            self.timer.cancel()
+#            self.get_logger().info("Movement completed.")

@@ -71,7 +71,7 @@ def set_camera_joint_once():
     joint_msg.header.stamp = node.get_clock().now().to_msg()
 
     joint_msg.name = ["pt_base_link_to_pt_link1", "pt_link1_to_pt_link2"]
-    joint_msg.position = [math.pi / 2, 0.0]
+    joint_msg.position = [0.0, math.pi / 2]
 
     publisher.publish(joint_msg)
     rclpy.spin_once(node, timeout_sec=0.1)

@@ -36,9 +36,10 @@ class LinesProcessor(Node):
 
         processed_rgb = create_line_image(rgb_image)
 
-        fname = f"./images_lines/{self.img_nmr:07}.jpg"
+        fname = f"~/var_ws_4/images_lines/{self.img_nmr:07}.jpg"
         self.img_nmr += 1
         cv2.imwrite(fname, processed_rgb)
+        print("saved to " + fname)
 
         # _, compressed_img = cv2.imencode(".jpg", processed_rgb)
 

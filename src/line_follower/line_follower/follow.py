@@ -37,7 +37,7 @@ def follow_line(drive_publisher, rgb_image):
     rho, theta = closest_line[0], closest_line[1]
     if theta > PARALLEL_ERROR:
         # if we are not headed in the right direction correct it
-        drive_publisher.move(0, 0, ANGULAR_VELOCITY, thetha / ANGULAR_VELOCITY)
+        drive_publisher.move(0.0, ANGULAR_VELOCITY, thetha / ANGULAR_VELOCITY)
     else:
         # otherwise just move forward
         drive_publsher.move(LINEAR_VELOCITY, 0.0, DURATION_LINEAR_MOVE)

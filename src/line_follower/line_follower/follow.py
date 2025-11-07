@@ -12,7 +12,7 @@ from image_subscriber.image_subscriber import ImageSubscriber
 from .hough_tools import *
 
 LINEAR_VELOCITY = 0.2
-DURATION_LINEAR_MOVE = 10  # seconds
+DURATION_LINEAR_MOVE = 0.5  # seconds
 
 ANGULAR_VELOCITY = math.pi / 4  # radians per second
 
@@ -31,7 +31,7 @@ def wrap_to_pi(a):
 
 
 def rotation_parallel_from_hough(theta):
-    r = wrap_to_pi(theta + math.pi / 2)
+    r = wrap_to_pi(theta)
     r_opposite = wrap_to_pi(r + math.pi)
     return r if abs(r) <= abs(r_opposite) else r_opposite
 

@@ -58,7 +58,7 @@ def polar_lines(edges, origin=(0,0), full_circle=False):
     
     return r_theta
 
-def filter_lines(r_theta, tolerance=np.pi/4):
+def filter_lines(r_theta, tolerance=np.pi/6):
     cmean = circmean(r_theta[:,1], high=np.pi)
     delta = r_theta[:,1] - cmean
     mask = delta < tolerance

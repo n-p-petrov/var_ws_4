@@ -5,7 +5,7 @@ from driver.driver_publisher import DrivePublisher
 from image_subscriber.image_subscriber import ImageSubscriber
 import cv2
 import numpy as np
-from hough_tools import *
+from .hough_tools import *
 
 LINEAR_VELOCITY = 0.2
 DURATION_LINEAR_MOVE = 10  # seconds

@@ -1,9 +1,11 @@
 import math
 from functools import partial
-
 import rclpy
 from driver.driver_publisher import DrivePublisher
 from image_subscriber.image_subscriber import ImageSubscriber
+import cv2
+import numpy as np
+from .hough_tools import *
 
 LINEAR_VELOCITY = 0.2
 DURATION_LINEAR_MOVE = 10  # seconds
@@ -12,8 +14,12 @@ ANGULAR_VELOCITY = math.pi / 4  # radians per second
 
 
 def compute_lines(rgb_image):
-    # TODO: add the actual implementation here lol
-    return [(1, math.pi / 3), (2, 0.0)]
+    image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2GRAY)
+    origin = image_center(image)
+    edges = image_preprocess(image)
+    r_theta = polar_lines(edges, origin)
+    filt_r_theta = filter_lines(r_theta)
+    return [(float(r), float(t)) for r,t in filt_r_theta]
 
 
 def follow_line(drive_publisher, rgb_image):

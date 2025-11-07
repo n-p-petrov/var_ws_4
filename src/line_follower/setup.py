@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'follow = line_follower.follow:main'
+            'follow = line_follower.follow:main',
+            'lines_pr = line_follower.lines_processor:main',
         ],
     },
 )

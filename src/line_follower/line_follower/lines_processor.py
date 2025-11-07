@@ -30,7 +30,7 @@ class LinesProcessor(Node):
         np_arr = np.frombuffer(msg.data, np.uint8)
         rgb_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR_RGB)
         gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
-        bgr_image = cv2.imdecode(np_arr)
+        bgr_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
         if gray_image is None:
             self.get_logger().error("Failed to decode image.")

@@ -30,6 +30,24 @@ def image_preprocess(image):
     image = cv2.Canny(image, 0, 255)
     return image
 
+def image_preprocess_sobel(image, ksize=3): # another edge detector algorithm
+    image_blur = cv2.GaussianBlur(image, (5,5), 0)
+    
+    gx = cv2.Sobel(image_blur, cv2.CV_32F, 1, 0, ksize=ksize)
+    gy = cv2.Sobel(image_blur, cv2.CV_32F, 0, 1, ksize=ksize)
+
+    mag = cv2.magnitude(gx, gy)
+    mag = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+    # auto threshold (Otsu) to get a binary edge map
+    _, edges = cv2.threshold(mag, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+    # remove small noise just like Canny’s non-maximum suppression hysteresis
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+    edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, kernel, iterations=1)
+    return edges
+
+
 def polar_lines(edges, origin=(0,0), full_circle=False):
     lines = cv2.HoughLines(edges, rho=1, theta=np.pi/180, threshold=100)
     ox, oy = origin

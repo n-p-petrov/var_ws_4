@@ -20,7 +20,7 @@ class ImageSubscriber(Node):
         self.bridge = CvBridge()
         self.callback = callback
         self.subscription = self.create_subscription(
-            CompressedImage, "/image_rect/compressed", self.listener_callback, 10
+            CompressedImage, "/image_rect/compressed", self.listener_callback, 1
         )
 
     def listener_callback(self, msg):

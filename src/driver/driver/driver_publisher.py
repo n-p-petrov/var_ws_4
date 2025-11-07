@@ -11,7 +11,7 @@ class DrivePublisher(Node):
         super().__init__("drive_publisher")
         # publisher of twist (movement) messages
         # if more than 10 msgs are not consumed it replaces the oldest one
-        self.publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.publisher = self.create_publisher(Twist, "/cmd_vel", 1)
 
     def turn(self, radians, angular_speed):
         """

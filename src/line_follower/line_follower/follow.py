@@ -5,8 +5,8 @@ import rclpy
 from driver.driver_publisher import DrivePublisher
 from image_subscriber.image_subscriber import ImageSubscriber
 
-LINEAR_VELOCITY = 2 * math.pi  # radians per second (2pi = 1 wheel rotation per second)
-DURATION_LINEAR_MOVE = 3  # seconds
+LINEAR_VELOCITY = 0.2
+DURATION_LINEAR_MOVE = 10  # seconds
 
 ANGULAR_VELOCITY = math.pi / 4  # radians per second
 
@@ -46,7 +46,7 @@ def main(args=None):
 
     print("Initializing the image subscriber...")
     image_subscriber = ImageSubscriber(partial(follow_line, drive_publisher))
-    rclpy.spin(camera_image)
+    rclpy.spin(image_subscriber)
 
     print("Line following finished")
 

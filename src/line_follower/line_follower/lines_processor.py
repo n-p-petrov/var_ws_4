@@ -37,11 +37,11 @@ class LinesProcessor(Node):
         processed_rgb = create_line_image(rgb_image)
         print("processed image")
         print(type(processed_rgb))
-        
+
         # _, compressed_img = cv2.imencode(".jpg", processed_rgb)
 
-        # out_msg = self.bridge.cv2_to_compressed_imgmsg(processed_rgb, dst_format="jpeg")
-        out_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="mono8", header=msg.header)
+        out_msg = self.bridge.cv2_to_compressed_imgmsg(processed_rgb, dst_format="jpeg")
+        # out_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="mono8", header=msg.header)
 
         # out_msg = CompressedImage()
         # out_msg.header = msg.header

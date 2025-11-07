@@ -33,20 +33,20 @@ class LinesProcessor(Node):
             return
 
         processed_rgb = create_line_image(rgb_image)
-        #_, compressed_img = cv2.imencode(".jpg", processed_rgb)
+        _, compressed_img = cv2.imencode(".jpg", processed_rgb)
 
-        #out_msg = Image()
-        #out_msg.header = msg.header
-        #out_msg.format = "jpeg"
-        #out_msg.data = np.array(compressed_img).tobytes()
-        #out_msg.data = np.array(processed_rgb)
-        #self.publisher_.publish(out_msg)
-        #self.get_logger().info("Processed image published.")
-
-        image_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="rgb8")
-        image_msg.header = msg.header  # copy timestamp and frame_id
-        self.publisher_.publish(image_msg)
+        out_msg = Image()
+        out_msg.header = msg.header
+        out_msg.format = "jpeg"
+        out_msg.data = np.array(compressed_img).tobytes()
+        out_msg.data = np.array(processed_rgb)
+        self.publisher_.publish(out_msg)
         self.get_logger().info("Processed image published.")
+
+        # image_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="rgb8")
+        # image_msg.header = msg.header  # copy timestamp and frame_id
+        # self.publisher_.publish(image_msg)
+        # self.get_logger().info("Processed image published.")
 
 
 def create_line_image(rgb_image):

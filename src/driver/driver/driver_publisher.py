@@ -11,7 +11,7 @@ class DrivePublisher(Node):
         super().__init__("drive_publisher")
         # publisher of twist (movement) messages
         # if more than 10 msgs are not consumed it replaces the oldest one
-        self.publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.publisher = self.create_publisher(Twist, "/cmd_vel", 1)
 
     def turn(self, radians, angular_speed):
         """
@@ -50,7 +50,7 @@ class DrivePublisher(Node):
         msg = Twist()
         msg.linear.x = speed
 
-        self.get_logger().info(f"Moving forward for {duration} sec with {radians_per_sec} rad/sec.")
+        self.get_logger().info(f"Moving forward for {duration} sec with {speed} rad/sec.")
 
         start = time.time()
         while time.time() - start < duration:

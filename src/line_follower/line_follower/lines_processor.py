@@ -20,7 +20,7 @@ class LinesProcessor(Node):
         )
 
         self.publisher_ = self.create_publisher(
-            Image, "/lines_image", 1,
+            CompressedImage, "/lines_image", 1,
         )
 
     def listener_callback(self, msg):

@@ -17,8 +17,8 @@ class LinesProcessor(Node):
         self.img_nmr  = 0
 
         self.subscription = self.create_subscription(
-            #CompressedImage, "/image_rect/compressed",
-            CompressedImage, "/image_raw/compressed",
+            CompressedImage, "/image_rect/compressed",
+            #CompressedImage, "/image_raw/compressed",
             self.listener_callback, 1,
         )
 

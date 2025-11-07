@@ -48,15 +48,14 @@ def follow_line(drive_publisher, rgb_image):
     with a new image.
     """
     hough_lines = compute_lines(rgb_image)
-    if len(hough_lines) > 0:
-        closest_line = min(hough_lines, key=lambda x: x[0])
-    
-        # face direction of line
-        rho, theta = closest_line[0], closest_line[1]
-        drive_publisher.turn(rotation_parallel_from_hough(theta), ANGULAR_VELOCITY)
-    
-        # move along line
-        drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)
+    closest_line = min(hough_lines, key=lambda x: x[0])
+
+    # face direction of line
+    rho, theta = closest_line[0], closest_line[1]
+    drive_publisher.turn(rotation_parallel_from_hough(theta), ANGULAR_VELOCITY)
+
+    # move along line
+    drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)
 
 
 def main(args=None):

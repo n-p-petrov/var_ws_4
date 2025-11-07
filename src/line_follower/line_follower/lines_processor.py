@@ -40,8 +40,12 @@ class LinesProcessor(Node):
         #out_msg.format = "jpeg"
         #out_msg.data = np.array(compressed_img).tobytes()
         #out_msg.data = np.array(processed_rgb)
+        #self.publisher_.publish(out_msg)
+        #self.get_logger().info("Processed image published.")
 
-        self.publisher_.publish(processed_rgb)
+        image_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="rgb8")
+        image_msg.header = msg.header  # copy timestamp and frame_id
+        self.publisher_.publish(image_msg)
         self.get_logger().info("Processed image published.")
 
 

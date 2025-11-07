@@ -37,7 +37,7 @@ class LinesProcessor(Node):
 
         out_msg = CompressedImage()
         out_msg.header = msg.header
-        out_msg.format = "jpeg"
+        out_msg.format = "jpg"
         out_msg.data = np.array(compressed_img).tobytes()
         self.publisher_.publish(out_msg)
         self.get_logger().info("Processed image published.")

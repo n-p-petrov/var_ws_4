@@ -58,9 +58,9 @@ def main(args=None):
         rclpy.spin(image_subscriber)
     except KeyboardInterrupt:
         print("Shutting down...")
-    finally:
         stop_msg = Twist()
         for i in range(10):
             drive_publisher.publisher.publish(stop_msg)
+    finally:
         drive_publisher.destroy_node()
         rclpy.shutdown()

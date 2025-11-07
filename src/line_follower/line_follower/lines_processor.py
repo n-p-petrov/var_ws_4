@@ -5,7 +5,7 @@ from sensor_msgs.msg import Image # Image is the message type
 from cv_bridge import CvBridge # Package to convert between ROS and OpenCV Images
 import cv2
 import numpy as np
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, Image
 
 
 class LinesProcessor(Node):
@@ -20,7 +20,7 @@ class LinesProcessor(Node):
         )
 
         self.publisher_ = self.create_publisher(
-            CompressedImage, "/lines_image", 1,
+            Image, "/lines_image", 1,
         )
 
     def listener_callback(self, msg):
@@ -33,14 +33,15 @@ class LinesProcessor(Node):
             return
 
         processed_rgb = create_line_image(rgb_image)
-        _, compressed_img = cv2.imencode(".jpg", processed_rgb)
+        #_, compressed_img = cv2.imencode(".jpg", processed_rgb)
 
-        out_msg = CompressedImage()
-        out_msg.header = msg.header
-        out_msg.format = "jpeg"
-        out_msg.data = np.array(compressed_img).tobytes()
+        #out_msg = Image()
+        #out_msg.header = msg.header
+        #out_msg.format = "jpeg"
+        #out_msg.data = np.array(compressed_img).tobytes()
+        #out_msg.data = np.array(processed_rgb)
 
-        self.publisher_.publish(out_msg)
+        self.publisher_.publish(processed_rgb)
         self.get_logger().info("Processed image published.")
 
 

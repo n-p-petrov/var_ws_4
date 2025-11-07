@@ -28,11 +28,16 @@ class LinesProcessor(Node):
         rgb_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR_RGB)
         gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
 
+        print("loaded image")
+
         if gray_image is None:
             self.get_logger().error("Failed to decode image.")
             return
 
         processed_rgb = create_line_image(rgb_image)
+        print("processed image")
+        print(type(processed_rgb))
+        
         # _, compressed_img = cv2.imencode(".jpg", processed_rgb)
 
         # out_msg = self.bridge.cv2_to_compressed_imgmsg(processed_rgb, dst_format="jpeg")

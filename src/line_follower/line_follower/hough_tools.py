@@ -71,8 +71,7 @@ def line_endpoints(x,y,a,b):
     y2 = int(round(y - 1000 * (a)))
     return x1,x2,y1,y2
 
-def draw_lines(r_theta, r_theta_fc, imagefile, origin=(0,0)):
-    image = cv2.imread(imagefile, cv2.IMREAD_COLOR_RGB)
+def draw_lines(r_theta, r_theta_fc, image, origin=(0,0)):
     ox, oy = origin
     for r, theta in r_theta_fc:
         a = np.cos(theta)

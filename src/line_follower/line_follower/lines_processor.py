@@ -29,8 +29,11 @@ class LinesProcessor(Node):
 
     def listener_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
-        rgb_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR_RGB)
-        gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
+        
+        bgr_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        rgb_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
+        gray_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+
 
         if gray_image is None:
             self.get_logger().error("Failed to decode image.")

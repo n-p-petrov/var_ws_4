@@ -14,14 +14,16 @@ class LinesProcessor(Node):
 
         self.bridge = CvBridge()
 
+        self.img_nmr  = 0
+
         self.subscription = self.create_subscription(
             CompressedImage, "/image_rect/compressed",
             self.listener_callback, 1,
         )
 
-        self.publisher_ = self.create_publisher(
-            Image, "/lines_image", 1,
-        )
+        # self.publisher_ = self.create_publisher(
+        #     Image, "/lines_image", 1,
+        # )
 
     def listener_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
@@ -33,18 +35,23 @@ class LinesProcessor(Node):
             return
 
         processed_rgb = create_line_image(rgb_image)
+
+        fname = f"./images_lines/{self.img_nmr:07}.jpg"
+        self.img_nmr += 1
+        cv2.imwrite(fname, processed_rgb)
+
         # _, compressed_img = cv2.imencode(".jpg", processed_rgb)
 
         # out_msg = self.bridge.cv2_to_compressed_imgmsg(processed_rgb, dst_format="jpeg")
-        out_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="8UC3", header=msg.header)
+        # out_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="8UC3", header=msg.header)
 
         # out_msg = CompressedImage()
         # out_msg.header = msg.header
         # out_msg.format = "jpg"
         # out_msg.data = np.array(compressed_img).tobytes()
 
-        self.publisher_.publish(out_msg)
-        self.get_logger().info("Processed image published.")
+        # self.publisher_.publish(out_msg)
+        # self.get_logger().info("Processed image published.")
 
         # image_msg = self.bridge.cv2_to_imgmsg(processed_rgb, encoding="rgb8")
         # image_msg.header = msg.header  # copy timestamp and frame_id

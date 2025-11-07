@@ -1,10 +1,12 @@
 import math
 from functools import partial
+
+import cv2
+import numpy as np
 import rclpy
 from driver.driver_publisher import DrivePublisher
 from image_subscriber.image_subscriber import ImageSubscriber
-import cv2
-import numpy as np
+
 from .hough_tools import *
 
 LINEAR_VELOCITY = 0.2
@@ -19,7 +21,7 @@ def compute_lines(rgb_image):
     edges = image_preprocess(image)
     r_theta = polar_lines(edges, origin)
     filt_r_theta = filter_lines(r_theta)
-    return [(float(r), float(t)) for r,t in filt_r_theta]
+    return [(float(r), float(t)) for r, t in filt_r_theta]
 
 
 def follow_line(drive_publisher, rgb_image):
@@ -38,7 +40,7 @@ def follow_line(drive_publisher, rgb_image):
 
     # face direction of line
     rho, theta = closest_line[0], closest_line[1]
-    drive_publisher.turn(theta, ANGULAR_VELOCITY)
+    drive_publisher.turn(math.pi / 2 - theta, ANGULAR_VELOCITY)
 
     # move along line
     drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)
@@ -46,14 +48,18 @@ def follow_line(drive_publisher, rgb_image):
 
 def main(args=None):
     rclpy.init(args=args)
-
     print("Initializing the drive publisher...")
     drive_publisher = DrivePublisher()
 
-    print("Initializing the image subscriber...")
-    image_subscriber = ImageSubscriber(partial(follow_line, drive_publisher))
-    rclpy.spin(image_subscriber)
-
-    print("Line following finished")
-
-    rclpy.shutdown()
+    try:
+        print("Initializing the image subscriber...")
+        image_subscriber = ImageSubscriber(partial(follow_line, drive_publisher))
+        rclpy.spin(image_subscriber)
+    except KeyboardInterrupt:
+        print("Shutting down...")
+    finally:
+        stop_msg = Twist()
+        for i in range(10):
+            drive_publisher.publisher.publish(stop_msg)
+        drive_publisher.destroy_node()
+        rclpy.shutdown()

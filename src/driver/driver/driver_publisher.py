@@ -32,11 +32,10 @@ class DrivePublisher(Node):
         start = time.time()
         while time.time() - start < duration:
             self.publisher.publish(msg)
-            time.sleep(
-                0.05
-            )  # wait 5 ms before asking the robot to turn again
+            time.sleep(0.05)  # wait 5 ms before asking the robot to turn again
 
-        self.publisher.publish(Twist())
+        for i in range(5):
+            self.publisher.publish(Twist())
         self.get_logger().info("Turn completed.")
 
     def move_forward(self, duration, speed):
@@ -50,17 +49,19 @@ class DrivePublisher(Node):
         msg = Twist()
         msg.linear.x = speed
 
-        self.get_logger().info(f"Moving forward for {duration} sec with {speed} rad/sec.")
+        self.get_logger().info(
+            f"Moving forward for {duration} sec with {speed} rad/sec."
+        )
 
         start = time.time()
         while time.time() - start < duration:
             self.publisher.publish(msg)
-            time.sleep(
-                0.05
-            )  # wait 5 ms before asking the robot to move forward again
+            time.sleep(0.05)  # wait 5 ms before asking the robot to move forward again
 
-        self.publisher.publish(Twist())
+        for i in range(5):
+            self.publisher.publish(Twist())
         self.get_logger().info("Moving forward completed.")
+
 
 def main(args=None):
     rclpy.init(args=args)

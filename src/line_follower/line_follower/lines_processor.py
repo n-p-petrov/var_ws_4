@@ -30,6 +30,7 @@ class LinesProcessor(Node):
         np_arr = np.frombuffer(msg.data, np.uint8)
         rgb_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR_RGB)
         gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
+        bgr_image = cv2.imdecode(np_arr)
 
         if gray_image is None:
             self.get_logger().error("Failed to decode image.")
@@ -39,7 +40,7 @@ class LinesProcessor(Node):
         processed_rgb = cv2.cvtColor(processed_rgb, cv2.COLOR_RGB2BGR)
         fname = f"/home/ws/var_ws_4/imgs/{self.img_nmr:07}.jpeg"
         self.img_nmr += 1
-        cv2.imwrite(fname, processed_rgb)
+        cv2.imwrite(fname, bgr_image) # change to processed
         print("saved to " + fname)
 
         # _, compressed_img = cv2.imencode(".jpg", processed_rgb)

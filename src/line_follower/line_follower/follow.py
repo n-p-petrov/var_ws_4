@@ -32,8 +32,7 @@ def follow_line(drive_publisher, rgb_image):
 
     # face direction of line
     rho, theta = closest_line[0], closest_line[1]
-    angle_to_parrallel = math.pi / 2 - thetha
-    drive_publisher.turn(angle_to_parrallel, ANGULAR_VELOCITY)
+    drive_publisher.turn(theta, ANGULAR_VELOCITY)
 
     # move along line
     drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)

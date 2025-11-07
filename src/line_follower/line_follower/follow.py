@@ -9,6 +9,7 @@ from driver.driver_publisher import DrivePublisher
 from geometry_msgs.msg import Twist
 from image_subscriber.image_subscriber import ImageSubscriber
 from rclpy.node import Node
+from sensor_msgs.msg import JointState
 
 from .hough_tools import *
 

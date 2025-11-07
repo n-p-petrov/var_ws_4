@@ -17,11 +17,11 @@ class ImageSubscriber(Node):
             callback: A function that takes in a RGB frame and performs an action.
         """
         super().__init__("image_subscriber")
-        self.subscription = self.create_subscription(
-            CompressedImage, "/image_rect/compressed", self.listener_callback, 10
-        )
         self.bridge = CvBridge()
         self.callback = callback
+        self.subscription = self.create_subscription(
+            CompressedImage, "/image_rect/compressed", self.listener_callback, 1
+        )
 
     def listener_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
@@ -29,7 +29,7 @@ class ImageSubscriber(Node):
 
         if cv_image is not None:
             rgb_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
-            callback(rgb_image)
+            self.callback(rgb_image)
             self.get_logger().info("Pan tilt camera feed callback successfully executed for a frame.")
         else:
             self.get_logger().info("Pan tilt camera feed failed due to unsuccessful cv2.imdecode.")

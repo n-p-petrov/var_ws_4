@@ -1,5 +1,6 @@
 import math
 import time
+from functools import partial
 
 import rclpy
 from geometry_msgs.msg import Twist
@@ -13,54 +14,37 @@ class DrivePublisher(Node):
         # if more than 10 msgs are not consumed it replaces the oldest one
         self.publisher = self.create_publisher(Twist, "/cmd_vel", 10)
 
-    def turn(self, radians, angular_speed):
+    def move(self, lin_vel, ang_vel, duration):
         """
-        Tells the robot to turn by some angle.
+        Tells the robot to move forward or/and by some angle for some amount of time.
 
         Args:
-            angle (float): Angle to turn by in radians.
-                If angle < 0, turns left.
-                If angle > 0, turns right.
-            angular_speed (float): radians per second
+            lin_vel (float): linear velocity; if negative robot moves backward, otherwise moves forward;
+            ang_vel (float): angular velocity; the sign determines the direction of rotation;
+            duration (float): for how long to perform the movement in seconds;
         """
-        msg = Twist()
-        duration = abs(radians) / angular_speed
-        msg.angular.z = angular_speed if radians > 0 else -angular_speed
+        start_time = time.time()
+        self.timer = self.create_timer(
+            0.05, partial(self._publish_twist, lin_vel, ang_vel, duration, start_time)
+        )
+        self.get_logger().info(
+            f"Started moving for {duration:.2f}s with linear velocity of {lin_vel:.2f} and angular velocity of {ang_vel:.2f}."
+        )
 
-        self.get_logger().info(f"Turning {radians} radians for {duration:.2f}s")
+    def _publish_twist(self, lin_vel, ang_vel, duration, start_time):
+        elapsed = time.time() - start_time
 
-        start = time.time()
-        while time.time() - start < duration:
+        if elapsed < duration:
+            msg = Twist()
+            msg.linear.x = lin_vel
+            msg.angular.z = ang_vel
             self.publisher.publish(msg)
-            time.sleep(
-                0.05
-            )  # wait 5 ms before asking the robot to turn again
+        else:
+            # stop the robot
+            self.publisher.publish(Twist())
+            self.timer.cancel()
+            self.get_logger().info("Movement completed.")
 
-        self.publisher.publish(Twist())
-        self.get_logger().info("Turn completed.")
-
-    def move_forward(self, duration, speed):
-        """
-        Tells the robot to move forward for some duration and some speed.
-
-        Args:
-            duration (float): for how much time to move forward in seconds
-            speed (float): speed in radians per sec (1 rotation of the wheels/sec = 2pi radians/sec)
-        """
-        msg = Twist()
-        msg.linear.x = speed
-
-        self.get_logger().info(f"Moving forward for {duration} sec with {radians_per_sec} rad/sec.")
-
-        start = time.time()
-        while time.time() - start < duration:
-            self.publisher.publish(msg)
-            time.sleep(
-                0.05
-            )  # wait 5 ms before asking the robot to move forward again
-
-        self.publisher.publish(Twist())
-        self.get_logger().info("Moving forward completed.")
 
 def main(args=None):
     rclpy.init(args=args)

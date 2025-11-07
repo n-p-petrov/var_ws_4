@@ -57,13 +57,22 @@ def main(args=None):
         print("Initializing the image subscriber...")
         image_subscriber = ImageSubscriber(partial(follow_line, drive_publisher))
         rclpy.spin(image_subscriber)
+
     except KeyboardInterrupt:
         print("Shutting down...")
-    finally:
-        stop_msg = Twist()
-        for i in range(5):
-            drive_publisher.publisher.publish(stop_msg)
-        time.sleep(0.5)
 
-        drive_publisher.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            stop_msg = Twist()
+            for i in range(5):
+                drive_publisher.publisher.publish(stop_msg)
+
+            time.sleep(0.3)
+
+    finally:
+        try:
+            drive_publisher.destroy_node()
+        except Exception:
+            pass
+
+        if rclpy.ok():
+            rclpy.shutdown()

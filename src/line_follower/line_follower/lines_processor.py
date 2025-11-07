@@ -35,6 +35,7 @@ class LinesProcessor(Node):
             return
 
         processed_rgb = create_line_image(rgb_image)
+        processed_rgb = cv2.cvtColor(processed_rgb, cv2.COLOR_RGB2BGR)
         fname = f"/home/ws/var_ws_4/imgs/{self.img_nmr:07}.jpeg"
         self.img_nmr += 1
         cv2.imwrite(fname, processed_rgb)

@@ -1,4 +1,5 @@
 import math
+import time
 from functools import partial
 
 import cv2
@@ -58,9 +59,11 @@ def main(args=None):
         rclpy.spin(image_subscriber)
     except KeyboardInterrupt:
         print("Shutting down...")
-        stop_msg = Twist()
-        for i in range(10):
-            drive_publisher.publisher.publish(stop_msg)
     finally:
+        stop_msg = Twist()
+        for i in range(5):
+            drive_publisher.publisher.publish(stop_msg)
+        time.sleep(0.5)
+
         drive_publisher.destroy_node()
         rclpy.shutdown()

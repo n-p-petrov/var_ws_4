@@ -26,6 +26,16 @@ def compute_lines(rgb_image):
     return [(float(r), float(t)) for r, t in filt_r_theta]
 
 
+def wrap_to_pi(a):
+    return (a + math.pi) % (2 * math.pi) - math.pi
+
+
+def rotation_parallel_from_hough(theta):
+    r = wrap_to_pi(theta + math.pi / 2)
+    r_opposite = wrap_to_pi(r + math.pi)
+    return r if abs(r) <= abs(r_opposite) else r_opposite
+
+
 def follow_line(drive_publisher, rgb_image):
     """
     This function is executed for each image captured from the camera.
@@ -42,7 +52,7 @@ def follow_line(drive_publisher, rgb_image):
 
     # face direction of line
     rho, theta = closest_line[0], closest_line[1]
-    drive_publisher.turn(math.pi / 2 - theta, ANGULAR_VELOCITY)
+    drive_publisher.turn(rotation_parallel_from_hough(theta), ANGULAR_VELOCITY)
 
     # move along line
     drive_publisher.move_forward(DURATION_LINEAR_MOVE, LINEAR_VELOCITY)

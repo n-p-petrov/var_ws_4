@@ -35,29 +35,30 @@ class ApriltagDetector(Node):
 
         for tag in detected_tags:
             det = AprilTagDetection()
-            
+
             det.family = self.family
-            det.id = int(tag['id'])
-            det.hamming = int(tag['hamming'])
-            det.decision_margin = float(tag['margin'])
-            det.goodness = float(tag['margin']) # how clearly the tag pattern stand out from the background
+            det.id = int(tag["id"])
+            det.hamming = int(tag["hamming"])
+            det.decision_margin = float(tag["margin"])
+            det.goodness = float(
+                tag["margin"]
+            )  # how clearly the tag pattern stand out from the background
 
             print(tag)
-            print(tag['center'])
+            print(tag["center"])
             det.centre = Point(
-                x = float(tag['center'][0])
-                y = float(tag['center'][1])
-                z = 0.0
-             )
+                x=float(tag["center"][0]), y=float(tag["center"][1]), z=0.0
+            )
 
-            orners = np.array(tag['lb-rb-rt-lt']).reshape(4, 2)
+            corners = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
             det.corners = [Point(x=float(x), y=float(y), z=0.0) for x, y in corners]
 
-            det.homography = [0.0]*9 # left empty for now can be added if needed
+            det.homography = [0.0] * 9  # left empty for now can be added if needed
 
             detection_array.detections.append(det)
 
         self.detections_publisher.publish(detection_array)
+
 
 def main(args=None):
     rclpy.init(args=args)

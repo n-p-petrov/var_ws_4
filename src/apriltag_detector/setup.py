@@ -23,7 +23,7 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "apriltag_detector = apriltag_detector.apriltag_detector_node:main",
+            "apriltag_detector = apriltag_detector.apriltag_detector:main",
         ],
     },
 )

@@ -19,7 +19,7 @@ DURATION_LINEAR_MOVE = 0.5  # seconds
 ANGULAR_VELOCITY = math.pi / 4  # radians per second
 
 # Choose "canny" (baseline) or "skeleton" (new algorithm) once here:
-LINE_METHOD = "canny"   # change to "skeleton" for your new detector
+LINE_METHOD = "skeleton"   # change to "skeleton" for your new detector or leave as "canny"
 
 
 #line computation

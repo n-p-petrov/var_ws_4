@@ -3,8 +3,9 @@ import numpy as np
 import rclpy
 from apriltag import apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
+from cv_bridge import CvBridge
 from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
 
 
 class ApriltagDetector(Node):
@@ -12,19 +13,20 @@ class ApriltagDetector(Node):
         super().__init__("apriltag_detector")
 
         self.image_subscriber = self.create_subscription(
-            CompressedImage, "/image_rect/compressed", self.listener_callback, 10
+            Image, "/image_rect", self.listener_callback, 10
         )
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, "/apriltag_detections", 10
         )
 
+        self.bridge = CvBridge()
+
         self.family = "tagStandard41h12"
         self.apriltagdetector = apriltag(self.family)
         self.get_logger().info(f"Apriltag Detector Initialized.")
 
-    def listener_callback(self, image_buffer):
-        np_arr = np.frombuffer(image_buffer.data, np.uint8)
-        gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
+    def listener_callback(self, image_msg):
+        gray_image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding="mono8")
         detected_tags = self.apriltagdetector.detect(gray_image)
 
         detection_array = AprilTagDetectionArray()

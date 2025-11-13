@@ -18,7 +18,7 @@ class ApriltagDetector(Node):
             CompressedImage, "/image_rect/compressed", self.listener_callback, 10
         )
         self.detections_publisher = self.create_publisher(
-            ApriltagDetectionArray, "/apriltag_detections", 10
+            AprilTagDetectionArray, "/apriltag_detections", 10
         )
 
         options = apriltag.DetectorOptions(families="tagStandard41h12")
@@ -29,7 +29,7 @@ class ApriltagDetector(Node):
         gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
         results = self.apriltagdetector.detect(gray_image)
 
-        detection_array = ApriltagDetectionArray()
+        detection_array = AprilTagDetectionArray()
 
         for r in results:
             polygon = Polygon()

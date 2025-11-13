@@ -4,8 +4,7 @@ import cv2  # pip install opencv-python
 import numpy as np
 import rclpy
 from apriltag import apriltag  # pip install apriltag
-from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray
-from geometry_msgs.msg import Point, Polygon
+from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
 
@@ -20,9 +19,10 @@ class ApriltagDetector(Node):
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, "/apriltag_detections", 10
         )
-        self.family = "tagStandard41h12"
 
+        self.family = "tagStandard41h12"
         self.apriltagdetector = apriltag(self.family)
+        self.get_logger().info(f"Apriltag Detector Initialized.")
 
     def listener_callback(self, image_buffer):
         np_arr = np.frombuffer(image_buffer.data, np.uint8)
@@ -44,19 +44,18 @@ class ApriltagDetector(Node):
                 tag["margin"]
             )  # how clearly the tag pattern stand out from the background
 
-            print(tag)
-            print(tag["center"])
             det.centre = Point(
-                x=float(tag["center"][0]), y=float(tag["center"][1]), z=0.0
+                x=float(tag["center"][0]), y=float(tag["center"][1])
             )
 
             corners = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
-            det.corners = [Point(x=float(x), y=float(y), z=0.0) for x, y in corners]
+            det.corners = [Point(x=float(x), y=float(y)) for x, y in corners]
 
             det.homography = [0.0] * 9  # left empty for now can be added if needed
 
             detection_array.detections.append(det)
 
+        self.get_logger().info(f"Detected {len(detection_array.detections)} apriltags. Publishing to `/apriltag_detections`")
         self.detections_publisher.publish(detection_array)
 
 

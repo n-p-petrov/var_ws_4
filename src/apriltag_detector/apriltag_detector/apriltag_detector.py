@@ -21,8 +21,7 @@ class ApriltagDetector(Node):
             AprilTagDetectionArray, "/apriltag_detections", 10
         )
 
-        options = apriltag.DetectorOptions(families="tagStandard41h12")
-        self.apriltagdetector = apriltag.Detector(options)
+        self.apriltagdetector = apriltag("tagStandard41h12")
 
     def listener_callback(self, image_buffer):
         np_arr = np.frombuffer(image_buffer.data, np.uint8)

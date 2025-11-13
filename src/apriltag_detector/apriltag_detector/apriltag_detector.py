@@ -4,11 +4,10 @@ import cv2  # pip install opencv-python
 import numpy as np
 import rclpy
 from apriltag import apriltag  # pip install apriltag
+from apriltag_msgs.msg import AprilTagDetectionArray
 from geometry_msgs.msg import Point32, Polygon
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
-
-from apriltag_detector.msg import ApriltagDetectionArray
 
 
 class ApriltagDetector(Node):

@@ -1,4 +1,4 @@
-import cv2  # pip install opencv-python
+import cv2
 import numpy as np
 import rclpy
 from apriltag import apriltag
@@ -7,55 +7,76 @@ from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 
+from apriltag_detector.utils import sharpen_img, upscale_img
+
 
 class ApriltagDetector(Node):
     def __init__(self):
         super().__init__("apriltag_detector")
+        self.apriltag_family = "tagStandard41h12"
+        self.image_topic = "/image_raw"
+        self.apriltag_topic = "/apriltag/detections"
+        self.scaling_factor = 5
 
         self.image_subscriber = self.create_subscription(
-            Image, "/image_rect", self.listener_callback, 10
+            Image, self.image_topic, self.listener_callback, 10
         )
+
         self.detections_publisher = self.create_publisher(
-            AprilTagDetectionArray, "/apriltag_detections", 10
+            AprilTagDetectionArray, self.apriltag_topic, 10
         )
 
         self.bridge = CvBridge()
 
-        self.family = "tagStandard41h12"
-        self.apriltagdetector = apriltag(self.family)
-        self.get_logger().info(f"Apriltag Detector Initialized.")
+        self.apriltagdetector = apriltag(self.apriltag_family)
 
-    def listener_callback(self, image_msg):
-        gray_image = self.bridge.imgmsg_to_cv2(image_msg, desired_encoding="mono8")
-        detected_tags = self.apriltagdetector.detect(gray_image)
+        self.total_num_tags = 0
 
+        self.get_logger().info("Apriltag Detector Initialized.")
+
+    def listener_callback(self, img_msg):
+        gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
+
+        enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
+        enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
+        detected_tags = self.apriltagdetector.detect(enhanced_img)
+
+        self.publish_apriltags(detected_tags)
+        self.get_logger().info(f"Detected {len(detected_tags)} tags.")
+        self.get_logger().info(f"Detected {self.total_num_tags} apriltags in total.")
+
+    def publish_apriltags(self, detected_tags):
         detection_array = AprilTagDetectionArray()
         detection_array.header.stamp = self.get_clock().now().to_msg()
         detection_array.header.frame_id = "camera"
 
         for tag in detected_tags:
+            self.total_num_tags = self.total_num_tags + 1
             det = AprilTagDetection()
-
-            det.family = self.family
+            det.family = self.apriltag_family
             det.id = int(tag["id"])
             det.hamming = int(tag["hamming"])
             det.decision_margin = float(tag["margin"])
-            det.goodness = float(
-                tag["margin"]
-            )  # how clearly the tag pattern stand out from the background
+            det.goodness = float(tag["margin"])  # pattern clarity
 
-            det.centre = Point(x=float(tag["center"][0]), y=float(tag["center"][1]))
+            det.centre = Point(
+                x=float(tag["center"][0] / self.scaling_factor),
+                y=float(tag["center"][1] / self.scaling_factor),
+            )
 
             corners = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
-            det.corners = [Point(x=float(x), y=float(y)) for x, y in corners]
+            det.corners = [
+                Point(
+                    x=float(x / self.scaling_factor), y=float(y / self.scaling_factor)
+                )
+                for x, y in corners
+            ]
 
-            det.homography = [0.0] * 9  # left empty for now can be added if needed
-
+            det.homography = [
+                0.0
+            ] * 9  # meaningless, has to be there (can also be comuted if needed)
             detection_array.detections.append(det)
 
-        self.get_logger().info(
-            f"Detected {len(detection_array.detections)} apriltags. Publishing to `/apriltag_detections`"
-        )
         self.detections_publisher.publish(detection_array)
 
 

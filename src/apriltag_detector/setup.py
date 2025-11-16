@@ -24,7 +24,8 @@ setup(
     entry_points={
         "console_scripts": [
             "apriltag_detector = apriltag_detector.apriltag_detector:main",
-            "apriltag_visualizer = apriltag_detector.apriltag_visualizer:main",
+            "apriltag_visualizer = apriltag_detector.apriltag_visualizer:visualize_from_stream",
+            "apriltag_visualizer_from_image = apriltag_detector.apriltag_from_image:main",
         ],
     },
 )

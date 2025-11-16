@@ -12,7 +12,7 @@ class ApriltagVisualizer(Node):
         super().__init__("apriltag_visualizer")
 
         self.image_subscriber = self.create_subscription(
-            Image, "/image_raw", self.image_callback, 10
+            Image, "/image_rect/compressed", self.image_callback, 10
         )
 
         self.apriltag_subscriber = self.create_subscription(
@@ -28,7 +28,9 @@ class ApriltagVisualizer(Node):
         self.text_color = (50, 255, 0)
 
     def image_callback(self, msg):
-        self.latest_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        np_arr = np.frombuffer(msg.data, np.uint8)
+        self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
         if self.latest_tags:
             self.draw_tags(self.latest_image, self.latest_tags)
         cv2.imshow("AprilTag Visualizer", self.latest_image)

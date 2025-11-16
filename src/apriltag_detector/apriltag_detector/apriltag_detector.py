@@ -14,7 +14,7 @@ class ApriltagDetector(Node):
     def __init__(self):
         super().__init__("apriltag_detector")
         self.apriltag_family = "tagStandard41h12"
-        self.image_topic = "/image_raw"
+        self.image_topic = "/image_rect"
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5
 
@@ -37,7 +37,7 @@ class ApriltagDetector(Node):
     def listener_callback(self, img_msg):
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
 
-        enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
+        enhanced_img = sharpen_img(gray_img, 15, 0.8, 0.2)
         enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
         detected_tags = self.apriltagdetector.detect(enhanced_img)
 

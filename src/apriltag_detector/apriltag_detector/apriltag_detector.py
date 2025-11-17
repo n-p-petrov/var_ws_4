@@ -21,8 +21,8 @@ class ApriltagDetector(Node):
         self.image_topic = "/image_raw"
         self.camera_info_topic = "/camera_info"
         self.apriltag_topic = "/apriltag/detections"
-        self.scaling_factor = 5  # how much we upscale the input image
-        # physical size of our printed tags: 28.8 cm -> 0.288 m
+        self.scaling_factor = 5  # for upscaling the image
+        # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
         self.tag_size_m = 0.288
 
         # image + camera_info subscribers
@@ -32,7 +32,7 @@ class ApriltagDetector(Node):
         self.camera_info_subscriber = self.create_subscription(
             CameraInfo, self.camera_info_topic, self.camera_info_callback, 10
         )
-
+        
         # detections publisher
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, self.apriltag_topic, 10
@@ -41,13 +41,13 @@ class ApriltagDetector(Node):
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
-        # camera intrinsics will be filled from /camera_info
+        # camera intrinsics (filled from /camera_info)
         self.fx = None
         self.fy = None
         self.cx = None
         self.cy = None
-        self.dist_coeffs = None
         self.camera_matrix = None
+        self.dist_coeffs = None
 
         self.total_num_tags = 0
 
@@ -61,42 +61,40 @@ class ApriltagDetector(Node):
         self.cx = float(K[2])
         self.cy = float(K[5])
 
-        self.dist_coeffs = np.array(msg.d, dtype=np.float64).reshape(-1, 1)
-
         self.camera_matrix = np.array(
-            [
-                [self.fx, 0.0, self.cx],
-                [0.0, self.fy, self.cy],
-                [0.0, 0.0, 1.0],
-            ],
+            [[self.fx, 0.0, self.cx],
+             [0.0, self.fy, self.cy],
+             [0.0, 0.0, 1.0]],
             dtype=np.float64,
         )
 
-        # Only log once or very rarely
+        # distortion coefficients (may be length 5)
+        self.dist_coeffs = np.array(msg.d, dtype=np.float64).reshape(-1, 1)
+
         self.get_logger().debug(
-            f"Camera intrinsics updated: fx={self.fx:.2f}, fy={self.fy:.2f}, "
+            f"Camera intrinsics: fx={self.fx:.2f}, fy={self.fy:.2f}, "
             f"cx={self.cx:.2f}, cy={self.cy:.2f}"
         )
 
-    # Image callback: detect tags and publish
+    # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
-        # convert ROS image -> OpenCV gray
+        # convert ROS image -> OpenCV gray (uint8)
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
 
-        # enhance image for better detection
+        # enhance for robustness (same as your friend's version)
         enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
         enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
 
-        # detect tags (in upscaled image coordinates)
+        # detect tags on enhanced, upscaled image
         detected_tags = self.apriltagdetector.detect(enhanced_img)
 
-        # publish ROS message + run PnP for distance
+        # publish ROS detections + compute PnP pose
         self.publish_apriltags(detected_tags)
 
         self.get_logger().info(f"Detected {len(detected_tags)} tags in this frame.")
         self.get_logger().info(f"Detected {self.total_num_tags} apriltags in total.")
 
-    # build AprilTagDetectionArray and run PnP
+    # Build AprilTagDetectionArray and run solvePnP per tag
     def publish_apriltags(self, detected_tags):
         detection_array = AprilTagDetectionArray()
         detection_array.header.stamp = self.get_clock().now().to_msg()
@@ -109,10 +107,9 @@ class ApriltagDetector(Node):
             det.family = self.apriltag_family
             det.id = int(tag["id"])
             det.hamming = int(tag["hamming"])
-            det.decision_margin = float(tag["margin"])
-            det.goodness = float(tag["margin"])  # pattern clarity
+            det.decision_margin = float(tag["margin"])  # keep margin here
 
-            # scale back from upscaled coords to original image coords
+            # centre & corners: scale back from upscaled coords
             cx_scaled = float(tag["center"][0] / self.scaling_factor)
             cy_scaled = float(tag["center"][1] / self.scaling_factor)
             det.centre = Point(x=cx_scaled, y=cy_scaled)
@@ -124,12 +121,13 @@ class ApriltagDetector(Node):
                 Point(x=float(x), y=float(y)) for x, y in corners_scaled
             ]
 
-            # placeholder homography (not used right now)
+            # homography not used here; leave as zeros
             det.homography = [0.0] * 9
 
-            # PnP: estimate pose (rvec, tvec) with known intrinsics
+            # PnP pose estimation 
+            distance = -1.0  # default if we can't compute it
             if self.camera_matrix is not None and self.dist_coeffs is not None:
-                # 3D points of tag corners in tag coordinate frame
+                # 3D model of tag corners in tag frame (lb, rb, rt, lt)
                 S = self.tag_size_m
                 object_points = np.array(
                     [
@@ -156,18 +154,13 @@ class ApriltagDetector(Node):
                     success = False
 
                 if success:
-                    # distance from camera to tag center (meters)
                     tvec = tvec.reshape(3)
                     distance = float(np.linalg.norm(tvec))
-
                     self.get_logger().info(
                         f"Tag {det.id}: "
                         f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
                         f"distance ≈ {distance:.3f} m"
                     )
-
-                    # (optional) we could store distance in 'goodness' or elsewhere
-                    # det.goodness = distance
                 else:
                     self.get_logger().warn(
                         f"PnP pose estimation failed for tag {det.id}"
@@ -176,6 +169,10 @@ class ApriltagDetector(Node):
                 self.get_logger().warn(
                     "Camera intrinsics not available yet; skipping PnP."
                 )
+
+            # Store distance in 'goodness' so the visualizer can read it.
+            # (decision_margin still holds the AprilTag margin.)
+            det.goodness = float(distance)
 
             detection_array.detections.append(det)
 

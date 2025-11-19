@@ -4,7 +4,7 @@ import rclpy
 from apriltag_msgs.msg import AprilTagDetectionArray
 from cv_bridge import CvBridge
 from rclpy.node import Node
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage
 
 
 class ApriltagVisualizer(Node):
@@ -12,7 +12,7 @@ class ApriltagVisualizer(Node):
         super().__init__("apriltag_visualizer")
 
         self.image_subscriber = self.create_subscription(
-            Image, "/image_rect/compressed", self.image_callback, 10
+            CompressedImage, "/image_rect/compressed", self.image_callback, 10
         )
 
         self.apriltag_subscriber = self.create_subscription(

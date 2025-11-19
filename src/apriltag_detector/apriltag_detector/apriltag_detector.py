@@ -7,10 +7,75 @@ from rclpy.node import Node
 from apriltag import apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image, CameraInfo
+# from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import Image
 
 from apriltag_detector.utils import sharpen_img, upscale_img
 
+
+# class ApriltagDetector(Node):
+#     def __init__(self):
+#         super().__init__("apriltag_detector")
+
+#         # config
+#         self.apriltag_family = "tagStandard41h12"
+#         self.image_topic = "/image_raw"
+#         self.camera_info_topic = "/camera_info"
+#         self.apriltag_topic = "/apriltag/detections"
+#         self.scaling_factor = 5  # for upscaling the image
+#         # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
+#         self.tag_size_m = 0.288
+
+#         # image + camera_info subscribers
+#         self.image_subscriber = self.create_subscription(
+#             Image, self.image_topic, self.listener_callback, 10
+#         )
+#         self.camera_info_subscriber = self.create_subscription(
+#             CameraInfo, self.camera_info_topic, self.camera_info_callback, 10
+#         )
+        
+#         # detections publisher
+#         self.detections_publisher = self.create_publisher(
+#             AprilTagDetectionArray, self.apriltag_topic, 10
+#         )
+
+#         self.bridge = CvBridge()
+#         self.apriltagdetector = apriltag(self.apriltag_family)
+
+#         # camera intrinsics (filled from /camera_info)
+#         self.fx = None
+#         self.fy = None
+#         self.cx = None
+#         self.cy = None
+#         self.camera_matrix = None
+#         self.dist_coeffs = None
+
+#         self.total_num_tags = 0
+
+#         self.get_logger().info("Apriltag Detector with PnP Initialized.")
+
+#     # CameraInfo callback: store intrinsics
+#     def camera_info_callback(self, msg: CameraInfo):
+#         K = msg.k  # 3x3 row-major
+#         self.fx = float(K[0])
+#         self.fy = float(K[4])
+#         self.cx = float(K[2])
+#         self.cy = float(K[5])
+
+#         self.camera_matrix = np.array(
+#             [[self.fx, 0.0, self.cx],
+#              [0.0, self.fy, self.cy],
+#              [0.0, 0.0, 1.0]],
+#             dtype=np.float64,
+#         )
+
+#         # distortion coefficients (may be length 5)
+#         self.dist_coeffs = np.array(msg.d, dtype=np.float64).reshape(-1, 1)
+
+#         self.get_logger().debug(
+#             f"Camera intrinsics: fx={self.fx:.2f}, fy={self.fy:.2f}, "
+#             f"cx={self.cx:.2f}, cy={self.cy:.2f}"
+#         )
 
 class ApriltagDetector(Node):
     def __init__(self):
@@ -19,20 +84,16 @@ class ApriltagDetector(Node):
         # config
         self.apriltag_family = "tagStandard41h12"
         self.image_topic = "/image_raw"
-        self.camera_info_topic = "/camera_info"
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5  # for upscaling the image
         # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
         self.tag_size_m = 0.288
 
-        # image + camera_info subscribers
+        # image subscriber
         self.image_subscriber = self.create_subscription(
             Image, self.image_topic, self.listener_callback, 10
         )
-        self.camera_info_subscriber = self.create_subscription(
-            CameraInfo, self.camera_info_topic, self.camera_info_callback, 10
-        )
-        
+
         # detections publisher
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, self.apriltag_topic, 10
@@ -41,44 +102,37 @@ class ApriltagDetector(Node):
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
-        # camera intrinsics (filled from /camera_info)
-        self.fx = None
-        self.fy = None
-        self.cx = None
-        self.cy = None
-        self.camera_matrix = None
-        self.dist_coeffs = None
-
-        self.total_num_tags = 0
-
-        self.get_logger().info("Apriltag Detector with PnP Initialized.")
-
-    # CameraInfo callback: store intrinsics
-    def camera_info_callback(self, msg: CameraInfo):
-        K = msg.k  # 3x3 row-major
-        self.fx = float(K[0])
-        self.fy = float(K[4])
-        self.cx = float(K[2])
-        self.cy = float(K[5])
+        # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
+        # width = 640, height = 480
+        fx = 342.182257
+        fy = 337.749042
+        cx = 328.736805
+        cy = 227.967227
 
         self.camera_matrix = np.array(
-            [[self.fx, 0.0, self.cx],
-             [0.0, self.fy, self.cy],
+            [[fx, 0.0, cx],
+             [0.0, fy, cy],
              [0.0, 0.0, 1.0]],
             dtype=np.float64,
         )
 
-        # distortion coefficients (may be length 5)
-        self.dist_coeffs = np.array(msg.d, dtype=np.float64).reshape(-1, 1)
+        # distortion: -0.254341 0.041454 0.005675 -0.001011 0.000000
+        # undistorted images,
+        self.dist_coeffs = np.array(
+            [-0.254341, 0.041454, 0.005675, -0.001011, 0.0],
+            dtype=np.float64
+        ).reshape(-1, 1)
 
-        self.get_logger().debug(
-            f"Camera intrinsics: fx={self.fx:.2f}, fy={self.fy:.2f}, "
-            f"cx={self.cx:.2f}, cy={self.cy:.2f}"
-        )
+        self.total_num_tags = 0
+
+        self.get_logger().info("Apriltag Detector with PnP Initialized.")
+        self.get_logger().info(f"Using hardcoded intrinsics for /image_raw: "
+                               f"fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}")
+
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
-        # convert ROS image -> OpenCV gray (uint8)
+        # convert ROS image -> OpenCV gray
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
 
         # enhance for robustness (same as your friend's version)
@@ -147,15 +201,16 @@ class ApriltagDetector(Node):
                         image_points,
                         self.camera_matrix,
                         self.dist_coeffs,
-                        flags=cv2.SOLVEPNP_ITERATIVE,
+                        # flags=cv2.SOLVEPNP_ITERATIVE,
+                        flags=cv2.SOLVEPNP_IPPE_SQUARE
                     )
                 except cv2.error as e:
                     self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
                     success = False
 
                 if success:
-                    tvec = tvec.reshape(3)
-                    distance = float(np.linalg.norm(tvec))
+                    tvec = tvec.reshape(3) # CHANGE
+                    distance = float(np.linalg.norm(tvec)) # CHANGE
                     self.get_logger().info(
                         f"Tag {det.id}: "
                         f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "

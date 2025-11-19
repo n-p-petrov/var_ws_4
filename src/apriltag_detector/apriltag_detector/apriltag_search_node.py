@@ -52,7 +52,7 @@ class AprilTagSearchNode(Node):
 
         self.current_angle = self.current_angle + self.direction * self.STEP_SIZE
         self.get_logger().info(
-            f"Moving the camera to position: {self.current_angle / PI * 180} degrees."
+            f"Moving the camera to position: {int(self.current_angle / PI * 180)} degrees."
         )
 
         joint_msg = JointState()

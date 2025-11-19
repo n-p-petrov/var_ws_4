@@ -47,7 +47,7 @@ class AprilTagSearchNode(Node):
             self.empty_count = 0
 
     def camera_step(self):
-        if self.current_angle >= self.ANGLE_LIMIT:
+        if abs(self.current_angle) >= self.ANGLE_LIMIT:
             self.direction = self.direction * (-1)
 
         self.current_angle = self.current_angle + self.direction * self.STEP_SIZE

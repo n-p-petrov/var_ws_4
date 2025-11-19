@@ -14,7 +14,7 @@ class AprilTagSearchNode(Node):
     def __init__(self):
         super().__init__("apriltag_search_node")
         self.STEP_SIZE = to_rads(10)
-        self.ANGLE_LIMIT = to_rads(70)
+        self.ANGLE_LIMIT = to_rads(50)
         self.TOLERANCE = 10
 
         self.direction = 1
@@ -31,6 +31,8 @@ class AprilTagSearchNode(Node):
 
         self.reset_camera_tilt()
 
+        self.get_logger().info("AprilTag Search Node Initialized.")
+
     def detections_callback(self, msg: AprilTagDetectionArray):
         if len(msg.detections) > 1:
             self.empty_count = 0
@@ -38,6 +40,9 @@ class AprilTagSearchNode(Node):
             self.empty_count += 1
 
         if self.empty_count >= self.TOLERANCE:
+            self.get_logger().info(
+                f"No apriltags detected in the past {self.TOLERANCE} messages. Tilting the camera..."
+            )
             self.camera_step()
             self.empty_count = 0
 
@@ -46,6 +51,9 @@ class AprilTagSearchNode(Node):
             self.direction = self.direction * (-1)
 
         self.current_angle = self.current_angle + self.direction * self.STEP_SIZE
+        self.get_logger().info(
+            f"Moving the camera to position: {self.current_angle / PI * 180} degrees."
+        )
 
         joint_msg = JointState()
         joint_msg.header.stamp = self.get_clock().now().to_msg()
@@ -55,6 +63,7 @@ class AprilTagSearchNode(Node):
         self.camera_tilt_publisher.publish(joint_msg)
 
     def reset_camera_tilt(self):
+        self.get_logger().info("Resetting camera position to [0, 0].")
         joint_msg = JointState()
         joint_msg.header.stamp = self.get_clock().now().to_msg()
 

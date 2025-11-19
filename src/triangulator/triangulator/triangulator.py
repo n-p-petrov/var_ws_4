@@ -20,7 +20,7 @@ class Triangulator(Node):
             AprilTagDetectionArray, "/apriltag_detections", self.listener_callback, 10
         )
         self.coordinates_publisher = self.create_publisher(
-            tuple , "/apriltag_detections", 10              #TODO define coords
+            tuple , "/triangulated_pos", 10              #TODO define coords
         )
 
         self.qr_coords = { # 00 at arnouds desk, 7510 x 10520  at window at computers
@@ -40,6 +40,9 @@ class Triangulator(Node):
         self.height = 10520  # mm  760 + 9000 + 760
         # 
         
+        self.last10_positions = []
+        # self.pos = None
+        
     def two_point_triangl(self, qrids, distances) -> tuple:
         coords1 = self.qr_coords.get(qrids[0])
         coords2 = self.qr_coords.get(qrids[1])
@@ -52,7 +55,12 @@ class Triangulator(Node):
         for i in intersection:
             if 0 <= i.x.evalf() <= self.width and 0 <= i.y.evalf() <= self.height:
                 return (i.x.evalf(), i.y.evalf())
-        
+            
+    
+    def add_position(self, position):
+        self.last10_positions.append(position)
+        if len(self.last10_positions) > 10:
+            self.last10_positions.pop(0)
         
     def multipoint_triangl(self, qrids, distances):
         # https://www.mi.fu-berlin.de/inf/groups/ag-tech/projects/ls2/ipin.pdf
@@ -76,6 +84,8 @@ class Triangulator(Node):
         pos, *_ = np.linalg.lstsq(A, b, rcond=None)  # least-squares solution
         return pos  # (x, y)
     
+    
+    
     def listener_callback(self, qrid_distance):
         if len(qrid_distance.qrid) < 2:
             self.get_logger().info("Not enough QR codes detected for triangulation.")
@@ -83,6 +93,7 @@ class Triangulator(Node):
         if len(qrid_distance.qrid) == 2:
             position = self.two_point_triangl(qrid_distance.qrid, qrid_distance.distance)
             if position:
+                self.add_position(position)
                 self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]}")
             else:
                 self.get_logger().info("No valid intersection point found within bounds.")
@@ -90,6 +101,7 @@ class Triangulator(Node):
             position = self.multipoint_triangl(qrid_distance.qrid, qrid_distance.distance)
             if position:
                 self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]}")
+                self.add_position(position)
             else:
                 self.get_logger().info("No valid intersection point found within bounds.")
                 

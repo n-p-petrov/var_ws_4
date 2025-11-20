@@ -20,8 +20,8 @@ class ApriltagDetector(Node):
         self.image_topic = "/image_raw"
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5  # for upscaling the image
-        # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
-        self.tag_size_m = 0.288
+        # physical size of your printed tag (meters): 16.0 cm -> 0.160 m
+        self.tag_size_m = 0.160
 
         # image subscriber
         self.image_subscriber = self.create_subscription(
@@ -115,10 +115,10 @@ class ApriltagDetector(Node):
                 S = self.tag_size_m
                 object_points = np.array(
                     [
-                        [-S / 2.0, S / 2.0, 0.0],  # lb
-                        [S / 2.0, S / 2.0, 0.0],  # rb
-                        [S / 2.0, -S / 2.0, 0.0],  # rt
-                        [-S / 2.0, -S / 2.0, 0.0],  # lt
+                        [-S / 2.0, 0.0, -S / 2.0],  # lb
+                        [S / 2.0, 0.0, -S / 2.0],  # rb
+                        [S / 2.0, 0.0, S / 2.0],  # rt
+                        [-S / 2.0, 0.0, S / 2.0],  # lt
                     ],
                     dtype=np.float32,
                 )

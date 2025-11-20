@@ -21,7 +21,7 @@ class Triangulator(Node):
         )
         self.coordinates_publisher = self.create_publisher(
             tuple , "/triangulated_pos", self.publisher_coords, 10              #TODO define coords
-        )
+        ) #(x: float, y: float)
 
         self.qr_coords = { # 00 at arnouds desk, 7510 x 10520  at window at computers
                         #   assuming objects are in the middle of the lines

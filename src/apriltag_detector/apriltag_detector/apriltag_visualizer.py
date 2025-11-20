@@ -22,6 +22,8 @@ class ApriltagVisualizer(Node):
         self.apriltag_subscriber = self.create_subscription(
             AprilTagDetectionArray, "/apriltag/detections", self.tag_callback, 10
         )
+        
+        
 
         self.latest_image = None
         self.latest_tags = []

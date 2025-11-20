@@ -17,7 +17,7 @@ class Triangulator(Node):
         super().__init__("triangulator")
 
         self.apriltag_subscriber = self.create_subscription(
-            AprilTagDetectionArray, "/apriltag_detections", self.listener_callback, 10
+            AprilTagDetectionArray, "/apriltag/detections", self.listener_callback, 10
         )
         self.coordinates_publisher = self.create_publisher(
             tuple , "/triangulated_pos", self.publisher_coords, 10              #TODO define coords
@@ -109,7 +109,7 @@ class Triangulator(Node):
         n_tags = len(qrid_distance.detections)
         tag_ids = [det.id for det in qrid_distance.detections]
         tag_distances = [det.goodness for det in qrid_distance.detections]  # placeholder for actual distance
-        tag_midpoints = ([det.centre.x] for det in qrid_distance.detections, [det.centre.y] for det in qrid_distance.detections)
+        tag_midpoints = ([det.centre.x for det in qrid_distance.detections], [det.centre.y for det in qrid_distance.detections])
         if n_tags < 2:
             self.get_logger().info("Not enough QR codes detected for triangulation.")
             self.pos = None

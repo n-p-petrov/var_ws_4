@@ -14,7 +14,6 @@ from goal_finder.kalman import EkfNode
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 
-from .hough_tools import *
 
 LINEAR_VELOCITY = 0.2
 DURATION_LINEAR_MOVE = 0.5  # seconds

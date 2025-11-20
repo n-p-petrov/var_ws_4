@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import cv2
 import numpy as np
@@ -22,7 +21,7 @@ class ApriltagDetector(Node):
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5  # for upscaling the image
         # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
-        self.tag_size_m = 0.288
+        self.tag_size_m = 0.160
 
         # image subscriber
         self.image_subscriber = self.create_subscription(
@@ -39,20 +38,19 @@ class ApriltagDetector(Node):
 
         # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
         # width = 640, height = 480
-        fx = 342.182257
-        fy = 337.749042
-        cx = 328.736805
-        cy = 227.967227
+        fx = 321.501312
+        fy = 322.786384
+        cx = 355.064909
+        cy = 234.396912
 
         self.camera_matrix = np.array(
             [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
             dtype=np.float64,
         )
 
-        # distortion: -0.254341 0.041454 0.005675 -0.001011 0.000000
         # undistorted images,
         self.dist_coeffs = np.array(
-            [-0.254341, 0.041454, 0.005675, -0.001011, 0.0], dtype=np.float64
+            [-0.236985, 0.037089, 0.000979, -0.002565, 0.000000]
         ).reshape(-1, 1)
 
         self.total_num_tags = 0
@@ -67,9 +65,9 @@ class ApriltagDetector(Node):
     def listener_callback(self, img_msg: Image):
         # convert ROS image -> OpenCV gray
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
-
-        enhanced_img = sharpen_img(gray_img, 15, 0.8, 0.2)
-
+        gray_img = cv2.undistort(gray_img, self.camera_matrix, self.dist_coeffs)
+        # enhance for robustness (same as your friend's version)
+        enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
         enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
 
         # detect tags on enhanced, upscaled image
@@ -131,29 +129,29 @@ class ApriltagDetector(Node):
                         object_points,
                         image_points,
                         self.camera_matrix,
-                        self.dist_coeffs,
-                        # flags=cv2.SOLVEPNP_ITERATIVE,
-                        flags=cv2.SOLVEPNP_IPPE_SQUARE,
+                        np.zeros_like(self.dist_coeffs),
+                        flags=cv2.SOLVEPNP_ITERATIVE,
+                        # flags=cv2.SOLVEPNP_IPPE_SQUARE,
                     )
+                    if success:
+                        tvec = tvec.reshape(3)  # CHANGE
+                        # distance = float(np.linalg.norm(tvec)) # CHANGE
+                        distance = float(
+                            np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
+                        )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
+                        self.get_logger().info(
+                            f"Tag {det.id}: "
+                            f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
+                            f"distance ≈ {distance:.3f} m"
+                        )
+                    else:
+                        self.get_logger().warn(
+                            f"PnP pose estimation failed for tag {det.id}"
+                        )
                 except cv2.error as e:
                     self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
                     success = False
 
-                if success:
-                    tvec = tvec.reshape(3)  # CHANGE
-                    # distance = float(np.linalg.norm(tvec)) # CHANGE
-                    distance = float(
-                        np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
-                    )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
-                    self.get_logger().info(
-                        f"Tag {det.id}: "
-                        f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
-                        f"distance ≈ {distance:.3f} m"
-                    )
-                else:
-                    self.get_logger().warn(
-                        f"PnP pose estimation failed for tag {det.id}"
-                    )
             else:
                 self.get_logger().warn(
                     "Camera intrinsics not available yet; skipping PnP."

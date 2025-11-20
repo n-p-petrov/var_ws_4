@@ -1,67 +1,181 @@
-import argparse
-
-import cv2  # pip install opencv-python
+#!/usr/bin/env python3
+import cv2
 import numpy as np
 import rclpy
-from apriltag import apriltag  # pip install apriltag
+from apriltag import apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
+from cv_bridge import CvBridge
 from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
+
+from apriltag_detector.utils import sharpen_img, upscale_img
 
 
 class ApriltagDetector(Node):
     def __init__(self):
         super().__init__("apriltag_detector")
 
+        # config
+        self.apriltag_family = "tagStandard41h12"
+        self.image_topic = "/image_raw"
+        self.apriltag_topic = "/apriltag/detections"
+        self.scaling_factor = 5  # for upscaling the image
+        # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
+        self.tag_size_m = 0.288
+
+        # image subscriber
         self.image_subscriber = self.create_subscription(
-            CompressedImage, "/image_rect/compressed", self.listener_callback, 10
+            Image, self.image_topic, self.listener_callback, 10
         )
+
+        # detections publisher
         self.detections_publisher = self.create_publisher(
-            AprilTagDetectionArray, "/apriltag_detections", 10
+            AprilTagDetectionArray, self.apriltag_topic, 10
         )
 
-        self.family = "tagStandard41h12"
-        self.apriltagdetector = apriltag(self.family)
-        self.get_logger().info(f"Apriltag Detector Initialized.")
+        self.bridge = CvBridge()
+        self.apriltagdetector = apriltag(self.apriltag_family)
 
-    def listener_callback(self, image_buffer):
-        np_arr = np.frombuffer(image_buffer.data, np.uint8)
-        gray_image = cv2.imdecode(np_arr, cv2.IMREAD_GRAYSCALE)
-        detected_tags = self.apriltagdetector.detect(gray_image)
+        # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
+        # width = 640, height = 480
+        fx = 342.182257
+        fy = 337.749042
+        cx = 328.736805
+        cy = 227.967227
 
+        self.camera_matrix = np.array(
+            [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
+            dtype=np.float64,
+        )
+
+        # distortion: -0.254341 0.041454 0.005675 -0.001011 0.000000
+        # undistorted images,
+        self.dist_coeffs = np.array(
+            [-0.254341, 0.041454, 0.005675, -0.001011, 0.0], dtype=np.float64
+        ).reshape(-1, 1)
+
+        self.total_num_tags = 0
+
+        self.get_logger().info("Apriltag Detector with PnP Initialized.")
+        self.get_logger().info(
+            f"Using hardcoded intrinsics for /image_raw: "
+            f"fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}"
+        )
+
+    # Image callback: detect tags and publish detections
+    def listener_callback(self, img_msg: Image):
+        # convert ROS image -> OpenCV gray
+        gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
+
+        # enhance for robustness (same as your friend's version)
+        enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
+        enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
+
+        # detect tags on enhanced, upscaled image
+        detected_tags = self.apriltagdetector.detect(enhanced_img)
+
+        # publish ROS detections + compute PnP pose
+        self.publish_apriltags(detected_tags)
+
+        self.get_logger().info(f"Detected {len(detected_tags)} tags in this frame.")
+        self.get_logger().info(f"Detected {self.total_num_tags} apriltags in total.")
+
+    # Build AprilTagDetectionArray and run solvePnP per tag
+    def publish_apriltags(self, detected_tags):
         detection_array = AprilTagDetectionArray()
         detection_array.header.stamp = self.get_clock().now().to_msg()
-        detection_array.header.frame_id = "camera"
+        detection_array.header.frame_id = "camera"  # camera optical frame
 
         for tag in detected_tags:
-            det = AprilTagDetection()
+            self.total_num_tags += 1
 
-            det.family = self.family
+            det = AprilTagDetection()
+            det.family = self.apriltag_family
             det.id = int(tag["id"])
             det.hamming = int(tag["hamming"])
-            det.decision_margin = float(tag["margin"])
-            det.goodness = float(
-                tag["margin"]
-            )  # how clearly the tag pattern stand out from the background
+            det.decision_margin = float(tag["margin"])  # keep margin here
 
-            det.centre = Point(
-                x=float(tag["center"][0]), y=float(tag["center"][1])
-            )
+            # centre & corners: scale back from upscaled coords
+            cx_scaled = float(tag["center"][0] / self.scaling_factor)
+            cy_scaled = float(tag["center"][1] / self.scaling_factor)
+            det.centre = Point(x=cx_scaled, y=cy_scaled)
 
-            corners = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
-            det.corners = [Point(x=float(x), y=float(y)) for x, y in corners]
+            corners_arr = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
+            corners_scaled = corners_arr / float(self.scaling_factor)
 
-            det.homography = [0.0] * 9  # left empty for now can be added if needed
+            det.corners = [Point(x=float(x), y=float(y)) for x, y in corners_scaled]
+
+            # homography not used here; leave as zeros
+            det.homography = [0.0] * 9
+
+            # PnP pose estimation
+            distance = -1.0  # default if we can't compute it
+            if self.camera_matrix is not None and self.dist_coeffs is not None:
+                # 3D model of tag corners in tag frame (lb, rb, rt, lt)
+                S = self.tag_size_m
+                object_points = np.array(
+                    [
+                        [-S / 2.0, S / 2.0, 0.0],  # lb
+                        [S / 2.0, S / 2.0, 0.0],  # rb
+                        [S / 2.0, -S / 2.0, 0.0],  # rt
+                        [-S / 2.0, -S / 2.0, 0.0],  # lt
+                    ],
+                    dtype=np.float32,
+                )
+
+                image_points = corners_scaled.astype(np.float32)
+
+                try:
+                    success, rvec, tvec = cv2.solvePnP(
+                        object_points,
+                        image_points,
+                        self.camera_matrix,
+                        self.dist_coeffs,
+                        # flags=cv2.SOLVEPNP_ITERATIVE,
+                        flags=cv2.SOLVEPNP_IPPE_SQUARE,
+                    )
+                except cv2.error as e:
+                    self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
+                    success = False
+
+                if success:
+                    tvec = tvec.reshape(3)  # CHANGE
+                    # distance = float(np.linalg.norm(tvec)) # CHANGE
+                    distance = float(
+                        np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
+                    )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
+                    self.get_logger().info(
+                        f"Tag {det.id}: "
+                        f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
+                        f"distance ≈ {distance:.3f} m"
+                    )
+                else:
+                    self.get_logger().warn(
+                        f"PnP pose estimation failed for tag {det.id}"
+                    )
+            else:
+                self.get_logger().warn(
+                    "Camera intrinsics not available yet; skipping PnP."
+                )
+
+            # Store distance in 'goodness' so the visualizer can read it.
+            # (decision_margin still holds the AprilTag margin.)
+            det.goodness = float(distance)
 
             detection_array.detections.append(det)
 
-        self.get_logger().info(f"Detected {len(detection_array.detections)} apriltags. Publishing to `/apriltag_detections`")
         self.detections_publisher.publish(detection_array)
 
 
 def main(args=None):
     rclpy.init(args=args)
     node = ApriltagDetector()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()

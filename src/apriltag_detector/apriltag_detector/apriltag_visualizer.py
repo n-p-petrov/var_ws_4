@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 import cv2
-import numpy as np
 import rclpy
+from rclpy.node import Node
+
 from apriltag_msgs.msg import AprilTagDetectionArray
 from cv_bridge import CvBridge
-from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage
+
+from sensor_msgs.msg import Image
 
 
 class ApriltagVisualizer(Node):
@@ -21,6 +22,8 @@ class ApriltagVisualizer(Node):
         self.apriltag_subscriber = self.create_subscription(
             AprilTagDetectionArray, "/apriltag/detections", self.tag_callback, 10
         )
+        
+        
 
         self.latest_image = None
         self.latest_tags = []
@@ -28,13 +31,16 @@ class ApriltagVisualizer(Node):
         self.bridge = CvBridge()
 
         # colors for drawing (BGR)
-        self.line_color = (50, 255, 0)  # neon green for box
-        self.text_color = (50, 255, 0)  # neon green for ID
+        self.line_color = (50, 255, 0)   # neon green for box
+        self.text_color = (50, 255, 0)   # neon green for ID
         self.dist_color = (0, 200, 255)  # yellow-ish for distance
 
-    def image_callback(self, msg):
-        np_arr = np.frombuffer(msg.data, np.uint8)
-        self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+        self.get_logger().info("Apriltag Visualizer Initialized.")
+
+    # Image callback: draw tags (if any) and show window
+    def image_callback(self, msg: Image):
+        self.latest_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
         if self.latest_tags:
             self.draw_tags(self.latest_image, self.latest_tags)

@@ -201,3 +201,11 @@ class EkfNode(Node):
         
         self.get_logger().info(f"x={pose_msg.x:.2f}, y={pose_msg.y:.2f}, "
                                    f"theta={pose_msg.theta:.2f}, phi={self.x[3,0]:.2f}")
+        
+        
+def main(args=None):
+    rclpy.init(args=args)
+    ekf_node = EkfNode()
+    rclpy.spin(ekf_node)
+    ekf_node.destroy_node()
+    rclpy.shutdown()

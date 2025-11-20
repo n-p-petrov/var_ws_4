@@ -142,7 +142,7 @@ class ApriltagDetector(Node):
                     tvec = tvec.reshape(3)  # CHANGE
                     # distance = float(np.linalg.norm(tvec)) # CHANGE
                     distance = float(
-                        np.sqrt(tvec[0] ** 2 + tvec[1] ** 2)
+                        np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
                     )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
                     self.get_logger().info(
                         f"Tag {det.id}: "

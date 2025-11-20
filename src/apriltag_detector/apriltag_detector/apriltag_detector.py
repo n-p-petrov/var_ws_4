@@ -2,16 +2,15 @@
 import cv2
 import numpy as np
 import rclpy
-from rclpy.node import Node
-
 from apriltag import apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
 from cv_bridge import CvBridge
+from rclpy.node import Node
+
 # from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import Image
 
 from apriltag_detector.utils import sharpen_img, upscale_img
-
 
 # class ApriltagDetector(Node):
 #     def __init__(self):
@@ -33,7 +32,7 @@ from apriltag_detector.utils import sharpen_img, upscale_img
 #         self.camera_info_subscriber = self.create_subscription(
 #             CameraInfo, self.camera_info_topic, self.camera_info_callback, 10
 #         )
-        
+
 #         # detections publisher
 #         self.detections_publisher = self.create_publisher(
 #             AprilTagDetectionArray, self.apriltag_topic, 10
@@ -77,6 +76,7 @@ from apriltag_detector.utils import sharpen_img, upscale_img
 #             f"cx={self.cx:.2f}, cy={self.cy:.2f}"
 #         )
 
+
 class ApriltagDetector(Node):
     def __init__(self):
         super().__init__("apriltag_detector")
@@ -110,25 +110,23 @@ class ApriltagDetector(Node):
         cy = 227.967227
 
         self.camera_matrix = np.array(
-            [[fx, 0.0, cx],
-             [0.0, fy, cy],
-             [0.0, 0.0, 1.0]],
+            [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
             dtype=np.float64,
         )
 
         # distortion: -0.254341 0.041454 0.005675 -0.001011 0.000000
         # undistorted images,
         self.dist_coeffs = np.array(
-            [-0.254341, 0.041454, 0.005675, -0.001011, 0.0],
-            dtype=np.float64
+            [-0.254341, 0.041454, 0.005675, -0.001011, 0.0], dtype=np.float64
         ).reshape(-1, 1)
 
         self.total_num_tags = 0
 
         self.get_logger().info("Apriltag Detector with PnP Initialized.")
-        self.get_logger().info(f"Using hardcoded intrinsics for /image_raw: "
-                               f"fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}")
-
+        self.get_logger().info(
+            f"Using hardcoded intrinsics for /image_raw: "
+            f"fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}"
+        )
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
@@ -171,23 +169,21 @@ class ApriltagDetector(Node):
             corners_arr = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
             corners_scaled = corners_arr / float(self.scaling_factor)
 
-            det.corners = [
-                Point(x=float(x), y=float(y)) for x, y in corners_scaled
-            ]
+            det.corners = [Point(x=float(x), y=float(y)) for x, y in corners_scaled]
 
             # homography not used here; leave as zeros
             det.homography = [0.0] * 9
 
-            # PnP pose estimation 
+            # PnP pose estimation
             distance = -1.0  # default if we can't compute it
             if self.camera_matrix is not None and self.dist_coeffs is not None:
                 # 3D model of tag corners in tag frame (lb, rb, rt, lt)
                 S = self.tag_size_m
                 object_points = np.array(
                     [
-                        [-S / 2.0,  S / 2.0, 0.0],  # lb
-                        [ S / 2.0,  S / 2.0, 0.0],  # rb
-                        [ S / 2.0, -S / 2.0, 0.0],  # rt
+                        [-S / 2.0, S / 2.0, 0.0],  # lb
+                        [S / 2.0, S / 2.0, 0.0],  # rb
+                        [S / 2.0, -S / 2.0, 0.0],  # rt
                         [-S / 2.0, -S / 2.0, 0.0],  # lt
                     ],
                     dtype=np.float32,
@@ -202,16 +198,18 @@ class ApriltagDetector(Node):
                         self.camera_matrix,
                         self.dist_coeffs,
                         # flags=cv2.SOLVEPNP_ITERATIVE,
-                        flags=cv2.SOLVEPNP_IPPE_SQUARE
+                        flags=cv2.SOLVEPNP_IPPE_SQUARE,
                     )
                 except cv2.error as e:
                     self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
                     success = False
 
                 if success:
-                    tvec = tvec.reshape(3) # CHANGE
+                    tvec = tvec.reshape(3)  # CHANGE
                     # distance = float(np.linalg.norm(tvec)) # CHANGE
-                    distance = float(np.sqrt(tvec[0]**2 +  tvec[2]**2))   #  maaaaaaaaaaaaaybe exclude the first one, not sure
+                    distance = float(
+                        np.sqrt(tvec[0] ** 2 + tvec[1] ** 2)
+                    )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
                     self.get_logger().info(
                         f"Tag {det.id}: "
                         f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "

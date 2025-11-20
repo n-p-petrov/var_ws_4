@@ -60,23 +60,42 @@ class Triangulator(Node):
         self.last10_positions.append(position)
         if len(self.last10_positions) > 10:
             self.last10_positions.pop(0)
+    
+    def extract_most_reliable(self, qr_ids, qr_distances, qr_mids):
+        # choose the qr code closest to the center of the image
+        center_x = self.width / 2
+        center_y = self.height / 2
+        most_middle_idx = np.argmin(np.array(center_x - qr_mids[0])**2 + np.array(center_y - qr_mids[1])**2)
+        print(qr_mids)
+        print(most_middle_idx)
         
-    def multipoint_triangl(self, qrids, distances):
+        anchor_qr_id = qr_ids[most_middle_idx]
+        anchor_distance = qr_distances[most_middle_idx]
+        
+        list_of_others = qr_ids.pop(most_middle_idx, inplace=False)
+        list_of_distances = qr_distances.pop(most_middle_idx, inplace=False)
+        
+        return anchor_qr_id, anchor_distance, list_of_others, list_of_distances
+        
+  
+        
+    def multipoint_triangl(self, qrids, distances, midpoints):
         # try using as a reference the most midle qr TODO
         # https://www.mi.fu-berlin.de/inf/groups/ag-tech/projects/ls2/ipin.pdf
         # solve by lstsq by susbstracting the circles
         qrids = np.array(qrids, float)
         distances  = np.array(distances,  float)
-
-        x1, y1 = qrids[0]
-        r1 = distances[0]
+        qr_mids = np.array(midpoints, float)
+        
+        anchor_id, anchor_dist, other_ids, other_dists = self.extract_most_reliable(qrids.tolist(), distances.tolist(), qr_mids)    
+        x1, y1 = self.qr_coords.get(anchor_id)
         A = []
         b = []
 
-        for qrid, ri in zip(qrids[1:], distances[1:]):
+        for qrid, ri in zip(other_ids, other_dists):
             xi, yi = self.qr_coords.get(qrid)
             A.append([2*(xi - x1), 2*(yi - y1)])
-            b.append(r1**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2)
+            b.append(anchor_dist**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2)
 
         A = np.array(A)
         b = np.array(b)
@@ -90,6 +109,7 @@ class Triangulator(Node):
         n_tags = len(qrid_distance.detections)
         tag_ids = [det.id for det in qrid_distance.detections]
         tag_distances = [det.goodness for det in qrid_distance.detections]  # placeholder for actual distance
+        tag_midpoints = ([det.centre.x] for det in qrid_distance.detections, [det.centre.y] for det in qrid_distance.detections)
         if n_tags < 2:
             self.get_logger().info("Not enough QR codes detected for triangulation.")
             self.pos = None
@@ -102,7 +122,7 @@ class Triangulator(Node):
                 self.get_logger().info("No valid intersection point found within bounds.")
                 self.pos = None
         else:
-            position = self.multipoint_triangl(tag_ids, tag_distances)
+            position = self.multipoint_triangl(tag_ids, tag_distances, tag_midpoints)
             if position:
                 self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]}")
                 self.pos = position

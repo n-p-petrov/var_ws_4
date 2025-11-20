@@ -21,7 +21,7 @@ class ApriltagDetector(Node):
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5  # for upscaling the image
         # physical size of your printed tag (meters): 28.8 cm -> 0.288 m
-        self.tag_size_m = 0.288
+        self.tag_size_m = 0.160
 
         # image subscriber
         self.image_subscriber = self.create_subscription(

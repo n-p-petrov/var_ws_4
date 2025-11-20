@@ -26,6 +26,7 @@ setup(
             "apriltag_detector = apriltag_detector.apriltag_detector:main",
             "apriltag_visualizer = apriltag_detector.apriltag_visualizer:visualize_from_stream",
             "apriltag_visualizer_from_image = apriltag_detector.apriltag_from_image:main",
+            "apriltag_search_node = apriltag_detector.apriltag_search_node:main",
         ],
     },
 )

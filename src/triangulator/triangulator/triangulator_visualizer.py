@@ -39,11 +39,11 @@ class TriangulatorVisualizer(Node):
         point_in_image = (
             int(
                 self.pad
-                + point_in_field.x / self.field_max_x * self.field_image.shape[1]
+                + point_in_field.x / self.field_max_x * self.field_image.shape[0]
             ),
             int(
                 self.pad
-                + point_in_field.y / self.field_max_y * self.field_image.shape[0]
+                + point_in_field.y / self.field_max_y * self.field_image.shape[1]
             ),
         )
         self.get_logger().info(f"pos in image: {point_in_image}")

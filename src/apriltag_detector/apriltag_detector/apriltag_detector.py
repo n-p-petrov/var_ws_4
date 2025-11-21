@@ -38,10 +38,10 @@ class ApriltagDetector(Node):
 
         # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
         # width = 640, height = 480
-        fx = 321.501312
-        fy = 322.786384
-        cx = 355.064909
-        cy = 234.396912
+        fx = 298.904369
+        fy = 300.029312
+        cx = 333.732172
+        cy = 257.804732
 
         self.camera_matrix = np.array(
             [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
@@ -50,7 +50,7 @@ class ApriltagDetector(Node):
 
         # undistorted images,
         self.dist_coeffs = np.array(
-            [-0.236985, 0.037089, 0.000979, -0.002565, 0.000000]
+            [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
         ).reshape(-1, 1)
 
         self.total_num_tags = 0
@@ -61,11 +61,25 @@ class ApriltagDetector(Node):
             f"fx={fx:.2f}, fy={fy:.2f}, cx={cx:.2f}, cy={cy:.2f}"
         )
 
+        # image size
+        w = 640
+        h = 480
+
+        # compute the new camera matrix for the undistorted image
+        self.new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(
+            self.camera_matrix,
+            self.dist_coeffs,
+            (w, h),
+            0,  # alpha=0 keeps a clean free-of-black-borders image
+        )
+
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
         # convert ROS image -> OpenCV gray
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
-        gray_img = cv2.undistort(gray_img, self.camera_matrix, self.dist_coeffs)
+        gray_img = cv2.undistort(  # undistort via K and dist, make sure newK is self.new_camera_matrix for the output image
+            gray_img, self.camera_matrix, self.dist_coeffs, None, self.new_camera_matrix
+        )
         # enhance for robustness (same as your friend's version)
         enhanced_img = sharpen_img(gray_img, 31, 0.8, 0.2)
         enhanced_img = upscale_img(enhanced_img, self.scaling_factor)
@@ -97,6 +111,9 @@ class ApriltagDetector(Node):
             # centre & corners: scale back from upscaled coords
             cx_scaled = float(tag["center"][0] / self.scaling_factor)
             cy_scaled = float(tag["center"][1] / self.scaling_factor)
+            self.get_logger().info(
+                f"Center of tag {det.id}: ({cx_scaled}, {cy_scaled})"
+            )
             det.centre = Point(x=cx_scaled, y=cy_scaled)
 
             corners_arr = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
@@ -128,8 +145,8 @@ class ApriltagDetector(Node):
                     success, rvec, tvec = cv2.solvePnP(
                         object_points,
                         image_points,
-                        self.camera_matrix,
-                        np.zeros_like(self.dist_coeffs),
+                        self.new_camera_matrix,  # intrinsics of the calibrated image
+                        None,
                         flags=cv2.SOLVEPNP_ITERATIVE,
                         # flags=cv2.SOLVEPNP_IPPE_SQUARE,
                     )

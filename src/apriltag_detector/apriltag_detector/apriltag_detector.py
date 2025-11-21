@@ -62,8 +62,8 @@ class ApriltagDetector(Node):
         )
 
         # image size
-        w = 800
-        h = 600
+        w = 640
+        h = 480
 
         # compute the new camera matrix for the undistorted image
         self.new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(
@@ -77,7 +77,7 @@ class ApriltagDetector(Node):
     def listener_callback(self, img_msg: Image):
         # convert ROS image -> OpenCV gray
         gray_img = self.bridge.imgmsg_to_cv2(img_msg, desired_encoding="mono8")
-        gray_img = cv2.undistort( # undistort via K and dist, make sure newK is self.new_camera_matrix for the output image
+        gray_img = cv2.undistort(  # undistort via K and dist, make sure newK is self.new_camera_matrix for the output image
             gray_img, self.camera_matrix, self.dist_coeffs, None, self.new_camera_matrix
         )
         # enhance for robustness (same as your friend's version)
@@ -142,7 +142,7 @@ class ApriltagDetector(Node):
                     success, rvec, tvec = cv2.solvePnP(
                         object_points,
                         image_points,
-                        self.new_camera_matrix, # intrinsics of the calibrated image
+                        self.new_camera_matrix,  # intrinsics of the calibrated image
                         None,
                         flags=cv2.SOLVEPNP_ITERATIVE,
                         # flags=cv2.SOLVEPNP_IPPE_SQUARE,

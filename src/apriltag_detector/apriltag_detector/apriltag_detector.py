@@ -38,10 +38,10 @@ class ApriltagDetector(Node):
 
         # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
         # width = 640, height = 480
-        fx = 321.501312
-        fy = 322.786384
-        cx = 355.064909
-        cy = 234.396912
+        fx = 298.904369
+        fy = 300.029312
+        cx = 333.732172
+        cy = 257.804732
 
         self.camera_matrix = np.array(
             [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
@@ -50,7 +50,7 @@ class ApriltagDetector(Node):
 
         # undistorted images,
         self.dist_coeffs = np.array(
-            [-0.236985, 0.037089, 0.000979, -0.002565, 0.000000]
+            [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
         ).reshape(-1, 1)
 
         self.total_num_tags = 0

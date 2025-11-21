@@ -111,6 +111,9 @@ class ApriltagDetector(Node):
             # centre & corners: scale back from upscaled coords
             cx_scaled = float(tag["center"][0] / self.scaling_factor)
             cy_scaled = float(tag["center"][1] / self.scaling_factor)
+            self.get_logger().info(
+                f"Center of tag {det.id}: ({cx_scaled}, {cy_scaled})"
+            )
             det.centre = Point(x=cx_scaled, y=cy_scaled)
 
             corners_arr = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)

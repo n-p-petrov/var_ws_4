@@ -13,14 +13,20 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CompressedImage
 
+from std_msgs.msg import Bool
+from goal_finder.msg import UGVObstacle
+
 
 class UGVObstacleDetector(Node):
     def __init__(self):
         super().__init__("ugv_obstacle_detector")
 
         # Parameters
-        self.rgb_topic = "/oak/rgb/image_rect"
-        self.depth_topic = "/oak/stereo/image_rect/compressedDepth"
+        self.rgb_topic = "/stereo/left/image_raw"
+        # self.rgb_topic = "/color/image/compressed"  # it might be lower resolution 
+        # self.rgb_topic = "/oak/rgb/image_rect"
+        self.depth_topic = "/stereo/depth/compressedDepth"
+        # self.depth_topic = "/oak/stereo/image_rect/compressedDepth"
         self.max_obstacle_distance_m = 1.5  # threshold for obstacle distance (idk, I put 1.5 m, we can change later)
         self.min_blob_area_px = 800        # ignore tiny noise blobs < 800 px
         self.show_debug_window = False      # set False if no GUI available

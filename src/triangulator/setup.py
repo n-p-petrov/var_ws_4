@@ -25,6 +25,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pos_visualizer = triangulator.triangulator_visualizer:visualize_from_stream",
+            "triangulator = triangulator.triangulator:main",
         ],
     },
 )

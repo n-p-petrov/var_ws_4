@@ -24,6 +24,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'kalman = goal_finder.kalman:main',
+            'move = goal_finder.move:main',
+            
         ],
     },
 )

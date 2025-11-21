@@ -17,7 +17,7 @@ class ApriltagDetector(Node):
 
         # config
         self.apriltag_family = "tagStandard41h12"
-        self.image_topic = "/image_rect"
+        self.image_topic = "/image_raw"
         self.apriltag_topic = "/apriltag/detections"
         self.scaling_factor = 5  # for upscaling the image
         # physical size of your printed tag (meters): 28.8 cm -> 0.288 m

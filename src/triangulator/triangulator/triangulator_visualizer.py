@@ -18,6 +18,10 @@ class TriangulatorVisualizer(Node):
             Point, "/triangulated_pos", self.pos_callback, 10
         )
 
+        self.filtered_pos_subsciber = self.create_subscription(
+            Point, "/filtered_pose", self.pos_callback_filtered, 10
+        )
+
         self.field_image = cv2.imread(field_path, cv2.IMREAD_COLOR)
         self.pad = 120
         self.field_image = cv2.copyMakeBorder(
@@ -33,8 +37,11 @@ class TriangulatorVisualizer(Node):
         self.field_max_y = 10520
         self.field_width_px = self.field_image.shape[1] - 2 * self.pad
         self.field_height_px = self.field_image.shape[0] - 2 * self.pad
+        self.filtered_point_in_image = None
+        self.filtered_point_in_field = None
 
         self.pos_color = (0, 0, 255)  # BGR
+        self.filtered_pos_color = (255, 0, 0)  # BGR
 
     def pos_callback(self, point_in_field):
         self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
@@ -69,15 +76,63 @@ class TriangulatorVisualizer(Node):
         cv2.putText(
             field_image_copy,
             f"({int(point_in_field.x)}, {int(point_in_field.y)})",
-            (point_in_image[0] - 10, point_in_image[1]),
+            (point_in_image[0], point_in_image[1] - 25),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             self.pos_color,
             2,
         )
 
+        if self.filtered_point_in_image and self.filtered_point_in_field:
+            cv2.circle(
+                field_image_copy,
+                self.filtered_point_in_image,
+                5,
+                self.filtered_pos_color,
+                thickness=cv2.FILLED,
+            )
+
+            cv2.putText(
+                field_image_copy,
+                f"({int(self.filtered_point_in_field.x)}, {int(self.filtered_point_in_field.y)})",
+                (self.filtered_point_in_image[0], self.filtered_point_in_image[1] + 25),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                self.filtered_pos_color,
+                2,
+            )
+
         cv2.imshow("Triangulation Visualizer", field_image_copy)
         cv2.waitKey(5)
+
+    def pos_callback_filtered(self, point_in_field):
+        self.filtered_point_in_field = point_in_field
+        self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
+        point_in_image = (
+            int(
+                self.pad
+                + min(
+                    max(
+                        point_in_field.x / self.field_max_x * self.field_width_px,
+                        0,
+                    ),
+                    self.field_width_px - 1,
+                )
+            ),
+            int(
+                self.pad
+                + min(
+                    max(
+                        point_in_field.y / self.field_max_y * self.field_height_px,
+                        0,
+                    ),
+                    self.field_height_px - 1,
+                )
+            ),
+        )
+        self.get_logger().info(f"filtered pos in image: {point_in_image}")
+
+        self.filtered_point_in_image = point_in_image
 
 
 def visualize_from_stream(args=None):

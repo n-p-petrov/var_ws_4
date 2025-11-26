@@ -92,7 +92,7 @@ class EkfNode(Node):
 
     def cmd_vel_callback(self, msg: Twist):
         self.v = msg.linear.x *1000
-        self.omega = msg.angular.z
+        self.omega = msg.angular.z 
 
     def triangulated_callback(self, msg: Point):
         """
@@ -228,7 +228,7 @@ class EkfNode(Node):
         pose_msg.x = float(self.x[0, 0])
         pose_msg.y = float(self.x[1, 0])
         pose_msg.theta = float(self.x[2, 0])
-        point_msg = Point(x = pose_msg.x, y = pose_msg.y, z = 0.0)
+        point_msg = Point(x = pose_msg.x, y = pose_msg.y, z = pose_msg.theta)
         self.filtered_pose_pub.publish(point_msg)
         # self.filtered_pose_pub.publish(pose_msg)
         

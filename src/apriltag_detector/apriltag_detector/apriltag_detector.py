@@ -241,6 +241,7 @@ class ApriltagDetector(Node):
                 
                 robot_orientation_msg = Float32()
                 robot_orientation_msg.data = float(robot_orientation)
+                self.get_logger().info(f"Publishing robot orientation: {robot_orientation_msg.data} radians")
                 self.robot_orientation_publisher.publish(robot_orientation_msg)
 
                 # distance calculation

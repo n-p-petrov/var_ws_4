@@ -96,26 +96,32 @@ class UGVObstacleDetector(Node):
 
         obstacle_info, debug_img = self.detect_obstacles(bgr, depth)
 
+        msg_out = PointStamped()
+        msg_out.header.stamp = self.get_clock().now().to_msg()
+        msg_out.header.frame_id = "camera"
+
         if obstacle_info is not None:
             cx, cy, dist_m = obstacle_info
+
+            # You can still log detection
             self.get_logger().info(
                 f"Detected rover at distance {dist_m:.2f} m, "
                 f"image position x={cx}, y={cy}"
             )
 
-            # Publish centroid and distance 
-            msg_out = PointStamped()
-            msg_out.header.stamp = self.get_clock().now().to_msg()
-            msg_out.header.frame_id = "camera"   # logical frame name
-
             msg_out.point.x = float(cx)
             msg_out.point.y = float(cy)
             msg_out.point.z = float(dist_m)
 
-            self.obstacle_publisher.publish(msg_out)
-
         else:
-            self.get_logger().debug("No rover within threshold distance.")
+            # Publish -1 if there's no obstacle
+            msg_out.point.x = 0.0
+            msg_out.point.y = 0.0
+            msg_out.point.z = -1.0
+
+            # self.get_logger().debug("No rover detected.")
+            
+        self.obstacle_publisher.publish(msg_out)
 
         # Optional debug visualization
         if self.show_debug_window and debug_img is not None:

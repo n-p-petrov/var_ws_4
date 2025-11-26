@@ -13,17 +13,13 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CompressedImage
 
-#for publishing obstacle info
-from geometry_msgs.msg import PointStamped
-from rclpy.qos import qos_profile_sensor_data
 
 class UGVObstacleDetector(Node):
     def __init__(self):
         super().__init__("ugv_obstacle_detector")
 
         # Parameters
-        # self.rgb_topic = "/oak/rgb/image_raw"
-        self.rgb_topic = "/color/image"  # it might be lower resolution 
+        self.rgb_topic = "/color/image"
         self.depth_topic = "/stereo/depth/compressedDepth"
         self.max_obstacle_distance_m = 1.5  # threshold for obstacle distance (idk, I put 1.5 m, we can change later)
         self.min_blob_area_px = 800        # ignore tiny noise blobs < 800 px
@@ -36,25 +32,17 @@ class UGVObstacleDetector(Node):
 
         # Subscribers
         self.rgb_subscriber = self.create_subscription(
-            Image, self.rgb_topic, self.rgb_callback, qos_profile_sensor_data,
+            Image, self.rgb_topic, self.rgb_callback, 10
         )
         # depth is usually published as CompressedImage on *compressedDepth topics
         self.depth_subscriber = self.create_subscription(
-            CompressedImage, self.depth_topic, self.depth_callback, qos_profile_sensor_data,
+            CompressedImage, self.depth_topic, self.depth_callback, 10
         )
-        
-        # Publisher: centroid + distance
-        #   point.x = centroid x (pixels)
-        #   point.y = centroid y (pixels)
-        #   point.z = distance (meters)
-        #   header.frame_id = "camera"
-
-        self.obstacle_publisher = self.create_publisher(PointStamped, "/obstacle_detected", 10)
 
         self.get_logger().info(
             f"UGVObstacleDetector started. RGB: {self.rgb_topic}, "
             f"depth: {self.depth_topic}"
-        )        
+        )
 
     # Callbacks
 
@@ -70,7 +58,6 @@ class UGVObstacleDetector(Node):
             msg, desired_encoding="passthrough"
         ) # it's in mm
         self.latest_depth = depth_img
-        self.get_logger().debug("Got depth frame")
 
     def rgb_callback(self, msg: Image):
         """
@@ -82,7 +69,7 @@ class UGVObstacleDetector(Node):
         3. Run color+depth detection.
         """
         if self.latest_depth is None:
-            self.get_logger().debug("No depth frame available")
+            # No depth yet – cannot compute distances
             return
 
         bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
@@ -98,32 +85,15 @@ class UGVObstacleDetector(Node):
 
         obstacle_info, debug_img = self.detect_obstacles(bgr, depth)
 
-        msg_out = PointStamped()
-        msg_out.header.stamp = self.get_clock().now().to_msg()
-        msg_out.header.frame_id = "camera"
-
+        # Log the most relevant obstacle (closest in front)
         if obstacle_info is not None:
             cx, cy, dist_m = obstacle_info
-
-            # You can still log detection
             self.get_logger().info(
                 f"Detected rover at distance {dist_m:.2f} m, "
                 f"image position x={cx}, y={cy}"
             )
-
-            msg_out.point.x = float(cx)
-            msg_out.point.y = float(cy)
-            msg_out.point.z = float(dist_m)
-
         else:
-            # Publish -1 if there's no obstacle
-            msg_out.point.x = 0.0
-            msg_out.point.y = 0.0
-            msg_out.point.z = -1.0
-
-            # self.get_logger().debug("No rover detected.")
-
-        self.obstacle_publisher.publish(msg_out)
+            self.get_logger().debug("No rover within threshold distance.")
 
         # Optional debug visualization
         if self.show_debug_window and debug_img is not None:
@@ -171,10 +141,6 @@ class UGVObstacleDetector(Node):
         contours, _ = cv2.findContours(
             mask_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
-        
-        self.get_logger().info(
-            f"contours: {contours}"
-        )   
 
         bounding_box_obstacle = None
         closest_robot = float("inf")

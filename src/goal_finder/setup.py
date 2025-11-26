@@ -27,6 +27,7 @@ setup(
             'kalman = goal_finder.kalman:main',
             'move = goal_finder.move:main',
             'ugv_obstacle_detector = goal_finder.ugv_obstacle_detector:main',
+            'ugv_obstacle = goal_finder.ugv_obstacle:main',
         ],
     },
 )

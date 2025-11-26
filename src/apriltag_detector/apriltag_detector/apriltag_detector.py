@@ -231,7 +231,7 @@ class ApriltagDetector(Node):
 
                 if self.camera_pan_angle:
                     robot_orientation = (
-                        robot_orientation + self.camera_pan_angle
+                        robot_orientation - self.camera_pan_angle
                     )
                     print("robot orientation", robot_orientation)
 

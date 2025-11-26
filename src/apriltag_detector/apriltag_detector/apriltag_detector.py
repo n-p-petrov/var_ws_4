@@ -72,6 +72,15 @@ class ApriltagDetector(Node):
             (w, h),
             0,  # alpha=0 keeps a clean free-of-black-borders image
         )
+        
+        # TODO: fill this in (rads)
+        self.tag_orientation = {
+            1: 3.14,
+            2: 0.0
+        }
+
+        # TODO fill this in (rads)
+        self.camera_pan_angle = 0.0
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
@@ -160,11 +169,26 @@ class ApriltagDetector(Node):
                 # flags=cv2.SOLVEPNP_IPPE_SQUARE,
             )
             if success:
-                tvec = tvec.reshape(3)  # CHANGE
-                # distance = float(np.linalg.norm(tvec)) # CHANGE
+                # orientation calculation
+                print("RVEC", rvec)
+                obj_space_R = cv2.Rodrigues(rvec)
+                print("ONJ_SPACE_R", obj_space_R)
+                inv_obj_space_R = np.linalg.inv(obj_space_R)
+                print("INV_ONJ_SPACE_R", inv_obj_space_R)
+                obj_space_optic_axis = inv_obj_space_R @ np.array([0, 0 , 1]).T
+                print("OBJ_SPACE_OPTIC_AXIS", obj_space_optic_axis)
+                obj_space_optic_axis = obj_space_optic_axis / np.linalg.norm(obj_space_optic_axis)
+                print("OBJ_SPACE_OPTIC_AXIS NORMALIZED", obj_space_optic_axis)
+                angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
+                print("ANGLE TO OPTIC AXIS", angle_to_optic_axis)
+                robot_orientation_wrt_apriltag = angle_to_optic_axis + self.camera_pan_angle
+                print("ROBOT ORIENTATION WRT APRILTAG", robot_orientation_wrt_apriltag)
+
+                # distance calculation 
+                tvec = tvec.reshape(3)
                 distance = float(
                     np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
-                )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
+                )
                 self.get_logger().info(
                     f"Tag {id}: "
                     f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
@@ -176,7 +200,6 @@ class ApriltagDetector(Node):
                 )
         except cv2.error as e:
             self.get_logger().warn(f"solvePnP failed for tag {id}: {e}")
-            success = False
 
         return distance
 

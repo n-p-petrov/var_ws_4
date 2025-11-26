@@ -233,9 +233,12 @@ class ApriltagDetector(Node):
                 robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
                 print("robot orientation", robot_orientation)
 
-                print("camera pan", self.camera_pan_angle)
-                robot_orientation = robot_orientation + self.camera_pan_angle
-                print("corrected robot orientation", robot_orientation)
+                if self.camera_pan_angle:
+                    print("camera pan", self.camera_pan_angle)
+                    robot_orientation = robot_orientation + self.camera_pan_angle
+                    print("corrected robot orientation", robot_orientation)
+                else:
+                    self.get_logger().warn("Camera pan angle is not available. Assuming it is 0.0 rads...")
 
                 # distance calculation
                 tvec = tvec.reshape(3)

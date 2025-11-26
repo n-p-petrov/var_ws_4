@@ -209,6 +209,12 @@ class ApriltagDetector(Node):
                 robot_orientation_wrt_apriltag = (
                     angle_to_optic_axis + self.camera_pan_angle
                 )
+                if self.camera_pan_angle:
+                    print("camera pan", self.camera_pan_angle)
+                    robot_orientation_wrt_apriltag = robot_orientation_wrt_apriltag + self.camera_pan_angle
+                    print("corrected robot orientation", robot_orientation_wrt_apriltag)
+                else:
+                    self.get_logger().warn("Camera pan angle is not available. Assuming it is 0.0 rads...")
                 print("ROBOT ORIENTATION WRT APRILTAG", robot_orientation_wrt_apriltag)
 
                 inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
@@ -232,13 +238,6 @@ class ApriltagDetector(Node):
 
                 robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
                 print("robot orientation", robot_orientation)
-
-                if self.camera_pan_angle:
-                    print("camera pan", self.camera_pan_angle)
-                    robot_orientation = robot_orientation + self.camera_pan_angle
-                    print("corrected robot orientation", robot_orientation)
-                else:
-                    self.get_logger().warn("Camera pan angle is not available. Assuming it is 0.0 rads...")
 
                 # distance calculation
                 tvec = tvec.reshape(3)

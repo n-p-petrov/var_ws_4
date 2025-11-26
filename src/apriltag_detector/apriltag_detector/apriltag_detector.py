@@ -188,7 +188,7 @@ class ApriltagDetector(Node):
 
                 inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
                 print("inv intrinsic matr", inv_intrinsic_matrix)
-                ray_camera_apriltag_center = inv_intrinsic_matrix @ np.array([center[0], center[1], 1]).T
+                ray_camera_apriltag_center = inv_obj_space_R @ inv_intrinsic_matrix @ np.array([center[0], center[1], 1]).T
                 print("ray from camera to apriltag center", ray_camera_apriltag_center)
                 a = ray_camera_apriltag_center.copy()
                 a[2] = 0.0

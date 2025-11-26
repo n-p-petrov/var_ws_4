@@ -78,22 +78,22 @@ class ApriltagDetector(Node):
             # angle between vector perpendicular to apriltag facing apriltag and x axis of the field
 
             # goal closer to where we sit
-            1: math.pi / 2,
+            1: np.pi / 2,
 
             # door side 
-            2: math.pi,
-            4: math.pi,
-            6: math.pi, 
+            2: np.pi,
+            4: np.pi,
+            6: np.pi, 
 
             # window side
-            3: 0,0,
+            3: 0.0,
             5: 0.0,
             7: 0.0,
 
             # arnold desk goal
-            8: -math.pi / 2,
-            9: -math.pi / 2,
-            10: -math.pi / 2,
+            8: -np.pi / 2,
+            9: -np.pi / 2,
+            10: -np.pi / 2,
         }
 
         # TODO fill this in (rads)

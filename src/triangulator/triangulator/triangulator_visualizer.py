@@ -1,37 +1,61 @@
+import os
+
 import cv2
 import rclpy
+from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import Point
 from rclpy.node import Node
 
+pkg_share = get_package_share_directory("triangulator")
+field_path = os.path.join(pkg_share, "imgs", "field.png")
 
-class TriangulationVisualizer(Node):
+
+class TriangulatorVisualizer(Node):
     def __init__(self):
-        super().__init__("triangulation_visualizer")
+        super().__init__("triangulator_visualizer")
 
         self.pos_subsciber = self.create_subscription(
-            tuple, "/triangulated_pos", self.pos_callback, 10
-        )  # (x, y)
+            Point, "/triangulated_pos", self.pos_callback, 10
+        )
 
-        self.field_image = cv2.imread("./imgs/field.png", cv2.IMREAD_COLOR)
-        cv2.imshow(self.field_image)
+        self.field_image = cv2.imread(field_path, cv2.IMREAD_COLOR)
+        self.pad = 120
+        self.field_image = cv2.copyMakeBorder(
+            self.field_image,
+            self.pad,  # top
+            self.pad,  # bottom
+            self.pad,  # left
+            self.pad,  # right
+            borderType=cv2.BORDER_CONSTANT,
+            value=(0, 0, 0),
+        )
         self.field_max_x = 7510
         self.field_max_y = 10520
 
         self.pos_color = (0, 0, 255)  # BGR
 
-    def pos_callback(self, pos_in_field):
-        pos_in_image = (
-            pos_in_field[0] / self.field_max_x * self.field_image.shape[0],
-            pos_in_field[1] / self.field_max_y * self.field_image.shape[1],
+    def pos_callback(self, point_in_field):
+        self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
+        point_in_image = (
+            int(
+                self.pad
+                + point_in_field.x / self.field_max_x * self.field_image.shape[1]
+            ),
+            int(
+                self.pad
+                + point_in_field.y / self.field_max_y * self.field_image.shape[0]
+            ),
         )
+        self.get_logger().info(f"pos in image: {point_in_image}")
         field_image_copy = self.field_image.copy()
         cv2.circle(
-            field_image_copy, pos_in_image, 5, self.pos_color, thickness=cv2.FILLED
+            field_image_copy, point_in_image, 5, self.pos_color, thickness=cv2.FILLED
         )
 
         cv2.putText(
             field_image_copy,
-            f"pos: {pos_in_field}",
-            (pos_in_image[0] - 10, pos_in_image[1] - 10),
+            f"({int(point_in_field.x)}, {int(point_in_field.y)})",
+            (point_in_image[0] - 10, point_in_image[1]),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             self.pos_color,
@@ -44,7 +68,7 @@ class TriangulationVisualizer(Node):
 
 def visualize_from_stream(args=None):
     rclpy.init(args=args)
-    node = TriangulationVisualizer()
+    node = TriangulatorVisualizer()
     try:
         rclpy.spin(node)
     finally:

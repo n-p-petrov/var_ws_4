@@ -15,7 +15,7 @@ class ApriltagVisualizer(Node):
 
         # subscribe to the raw camera image
         self.image_subscriber = self.create_subscription(
-            CompressedImage, "/image_rect/compressed", self.image_callback, 10
+            CompressedImage, "/image_raw/compressed", self.image_callback, 10
         )
 
         # subscribe to AprilTag detections from ApriltagDetector
@@ -35,12 +35,37 @@ class ApriltagVisualizer(Node):
         self.text_color = (50, 255, 0)   # neon green for ID
         self.dist_color = (0, 200, 255)  # yellow-ish for distance
 
+<<<<<<< HEAD
 
         self.get_logger().info("Apriltag Visualizer Initialized.")
 
     # Image callback: draw tags (if any) and show window
     def image_callback(self, msg: Image):
         self.latest_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+=======
+        # intrinsics
+        fx = 321.501312
+        fy = 322.786384
+        cx = 355.064909
+        cy = 234.396912
+
+        self.camera_matrix = np.array(
+            [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
+            dtype=np.float64,
+        )
+
+        # undistorted images,
+        self.dist_coeffs = np.array(
+            [-0.236985, 0.037089, 0.000979, -0.002565, 0.000000]
+        ).reshape(-1, 1)
+
+    def image_callback(self, msg):
+        np_arr = np.frombuffer(msg.data, np.uint8)
+        self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        self.latest_image = cv2.undistort(
+            self.latest_image, self.camera_matrix, self.dist_coeffs
+        )
+>>>>>>> d64bcd6 (fix triangulator visualizer, add calibration to image raw in apriltag visualizer)
 
         if self.latest_tags:
             self.draw_tags(self.latest_image, self.latest_tags)

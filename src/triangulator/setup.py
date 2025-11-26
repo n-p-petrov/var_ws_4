@@ -1,32 +1,31 @@
 from setuptools import find_packages, setup
 
-package_name = 'triangulator'
+package_name = "triangulator"
 
 setup(
     name=package_name,
-    version='0.0.0',
-    packages=find_packages(exclude=['test']),
+    version="0.0.0",
+    packages=find_packages(exclude=["test"]),
     data_files=[
-        ('share/ament_index/resource_index/packages',
-            ['resource/' + package_name]),
-        ('share/' + package_name, ['package.xml']),
+        ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
+        ("share/triangulator/imgs", ["imgs/field.png"]),
+        ("share/" + package_name, ["package.xml"]),
     ],
-    install_requires=['setuptools'],
+    install_requires=["setuptools"],
     zip_safe=True,
-    maintainer='viki',
-    maintainer_email='viktoria.pravdova@trojsten.sk',
-    description='TODO: Package description',
-    license='Apache-2.0',
+    maintainer="viki",
+    maintainer_email="viktoria.pravdova@trojsten.sk",
+    description="TODO: Package description",
+    license="Apache-2.0",
     extras_require={
-        'test': [
-            'pytest',
+        "test": [
+            "pytest",
         ],
     },
     entry_points={
         'console_scripts': [
             'triangulator = triangulator.triangulator:main',
-
-            
+            "pos_visualizer = triangulator.triangulator_visualizer:visualize_from_stream",
         ],
     },
 )

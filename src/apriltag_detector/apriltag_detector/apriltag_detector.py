@@ -73,8 +73,28 @@ class ApriltagDetector(Node):
             0,  # alpha=0 keeps a clean free-of-black-borders image
         )
 
-        # TODO: fill this in (rads)
-        self.tag_orientation = {1: 3.14, 2: 0.0}
+        self.tag_orientation = {
+            # RADIANS
+            # angle between vector perpendicular to apriltag facing apriltag and x axis of the field
+
+            # goal closer to where we sit
+            1: math.pi / 2,
+
+            # door side 
+            2: math.pi,
+            4: math.pi,
+            6: math.pi, 
+
+            # window side
+            3: 0,0,
+            5: 0.0,
+            7: 0.0,
+
+            # arnold desk goal
+            8: -math.pi / 2,
+            9: -math.pi / 2,
+            10: -math.pi / 2,
+        }
 
         # TODO fill this in (rads)
         self.camera_pan_angle = 0.0
@@ -203,8 +223,11 @@ class ApriltagDetector(Node):
                     angle_to_optic_axis = - angle_to_optic_axis
                 # when the angle is positive the viewing axis is to the right of the apriltag
                 # when the angle is negative the viewing axis is to the left of the apriltag
-
                 print("final angle", angle_to_optic_axis)
+
+                robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
+                print("robot orientation", robot_orientation)
+
 
                 # distance calculation
                 tvec = tvec.reshape(3)

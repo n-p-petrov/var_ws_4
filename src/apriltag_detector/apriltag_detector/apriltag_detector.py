@@ -33,7 +33,11 @@ class ApriltagDetector(Node):
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, self.apriltag_topic, 10
         )
-
+        # orientation publisher
+        self.robot_orientation_publisher = self.create_publisher(
+            Float32, "/orientation", 10
+        )
+        
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
@@ -234,6 +238,10 @@ class ApriltagDetector(Node):
                         robot_orientation - self.camera_pan_angle
                     )
                     print("robot orientation", robot_orientation)
+                
+                robot_orientation_msg = Float32()
+                robot_orientation_msg.data = float(robot_orientation)
+                self.robot_orientation_publisher.publish(robot_orientation_msg)
 
                 # distance calculation
                 tvec = tvec.reshape(3)

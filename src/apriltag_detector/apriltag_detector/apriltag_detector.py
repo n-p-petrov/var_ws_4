@@ -199,8 +199,10 @@ class ApriltagDetector(Node):
                 cross = np.cross(a, b)
                 print("cross", cross)
 
-                if cross[2] > 0:
+                if cross[2] < 0:
                     angle_to_optic_axis = - angle_to_optic_axis
+                # when the angle is positive the viewing axis is to the right of the apriltag
+                # when the angle is negative the viewing axis is to the left of the apriltag
 
                 print("final angle", angle_to_optic_axis)
 

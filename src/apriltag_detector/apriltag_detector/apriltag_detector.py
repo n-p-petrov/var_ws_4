@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import cv2
 import numpy as np
+import math
 import rclpy
 from apriltag import apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
@@ -104,6 +105,9 @@ class ApriltagDetector(Node):
         # TODO fill this in (rads)
         self.camera_pan_subscriber = self.create_subscription(Float32, "/camera_pan", self.camera_pan_callback, 10)
         self.camera_pan_angle = None
+        
+        self.last_orientation = None
+        self.orientation_alpha = 0.3  # 0..1, smaller = smoother
 
     def camera_pan_callback(self, msg):
         self.camera_pan_angle = float(msg.data)
@@ -208,7 +212,10 @@ class ApriltagDetector(Node):
                     obj_space_optic_axis
                 )
                 print("OBJ_SPACE_OPTIC_AXIS NORMALIZED", obj_space_optic_axis)
-                angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
+                # angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
+                z = obj_space_optic_axis[-1]
+                z = np.clip(z, -1.0, 1.0)
+                angle_to_optic_axis = np.arccos(z)
                 print("ANGLE TO OPTIC AXIS", angle_to_optic_axis)
 
                 inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
@@ -233,11 +240,22 @@ class ApriltagDetector(Node):
                 robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
                 print("camera orientation", robot_orientation)
 
-                if self.camera_pan_angle:
-                    robot_orientation = (
-                        robot_orientation - self.camera_pan_angle
-                    )
+                if self.camera_pan_angle is not None:
+                    robot_orientation = robot_orientation - self.camera_pan_angle
+
                     print("robot orientation", robot_orientation)
+                    
+                robot_orientation = wrap_angle(robot_orientation)
+                # --- Smooth it ---
+                if self.last_orientation is None:
+                    self.last_orientation = robot_orientation
+                else:
+                    diff = wrap_angle(robot_orientation - self.last_orientation)
+                    self.last_orientation = wrap_angle(
+                        self.last_orientation + self.orientation_alpha * diff
+                    )
+                robot_orientation = self.last_orientation
+                
                 
                 robot_orientation_msg = Float32()
                 robot_orientation_msg.data = float(robot_orientation)
@@ -258,6 +276,10 @@ class ApriltagDetector(Node):
             self.get_logger().warn(f"solvePnP failed for tag {id}: {e}")
 
         return distance
+
+
+def wrap_angle(a: float) -> float:
+    return (a + math.pi) % (2.0 * math.pi) - math.pi
 
 
 def main(args=None):

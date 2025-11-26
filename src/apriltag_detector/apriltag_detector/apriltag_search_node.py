@@ -68,7 +68,7 @@ class AprilTagSearchNode(Node):
         joint_msg.header.stamp = self.get_clock().now().to_msg()
 
         joint_msg.name = ["pt_base_link_to_pt_link1", "pt_link1_to_pt_link2"]
-        joint_msg.position = [-self.current_angle, 0.0]
+        joint_msg.position = [self.current_angle, 0.0]
         self.joint_states_publisher.publish(joint_msg)
 
     def reset_camera_tilt(self):

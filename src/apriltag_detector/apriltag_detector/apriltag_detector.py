@@ -171,7 +171,7 @@ class ApriltagDetector(Node):
             if success:
                 # orientation calculation
                 print("RVEC", rvec)
-                obj_space_R = cv2.Rodrigues(rvec)
+                obj_space_R, _ = cv2.Rodrigues(rvec)
                 print("ONJ_SPACE_R", obj_space_R)
                 inv_obj_space_R = np.linalg.inv(obj_space_R)
                 print("INV_ONJ_SPACE_R", inv_obj_space_R)

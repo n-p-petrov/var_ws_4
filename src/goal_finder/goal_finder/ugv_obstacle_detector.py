@@ -13,19 +13,17 @@ from rclpy.node import Node
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CompressedImage
 
-from std_msgs.msg import Bool
-from goal_finder.msg import UGVObstacle
+#for publishing obstacle info
+from geometry_msgs.msg import PointStamped
 
 class UGVObstacleDetector(Node):
     def __init__(self):
         super().__init__("ugv_obstacle_detector")
 
         # Parameters
-        self.rgb_topic = "/oak/rgb/image_raw"
-        # self.rgb_topic = "/color/image/compressed"  # it might be lower resolution 
-        # self.rgb_topic = "/oak/rgb/image_rect"
+        # self.rgb_topic = "/oak/rgb/image_raw"
+        self.rgb_topic = "/color/image"  # it might be lower resolution 
         self.depth_topic = "/stereo/depth/compressedDepth"
-        # self.depth_topic = "/oak/stereo/image_rect/compressedDepth"
         self.max_obstacle_distance_m = 1.5  # threshold for obstacle distance (idk, I put 1.5 m, we can change later)
         self.min_blob_area_px = 800        # ignore tiny noise blobs < 800 px
         self.show_debug_window = False      # set False if no GUI available
@@ -43,11 +41,19 @@ class UGVObstacleDetector(Node):
         self.depth_subscriber = self.create_subscription(
             CompressedImage, self.depth_topic, self.depth_callback, 10
         )
+        
+        # Publisher: centroid + distance
+        #   point.x = centroid x (pixels)
+        #   point.y = centroid y (pixels)
+        #   point.z = distance (meters)
+        #   header.frame_id = "camera"
+
+        self.obstacle_publisher = self.create_publisher(PointStamped, "/obstacle_detected", 10)
 
         self.get_logger().info(
             f"UGVObstacleDetector started. RGB: {self.rgb_topic}, "
             f"depth: {self.depth_topic}"
-        )
+        )        
 
     # Callbacks
 
@@ -90,13 +96,24 @@ class UGVObstacleDetector(Node):
 
         obstacle_info, debug_img = self.detect_obstacles(bgr, depth)
 
-        # Log the most relevant obstacle (closest in front)
         if obstacle_info is not None:
             cx, cy, dist_m = obstacle_info
             self.get_logger().info(
                 f"Detected rover at distance {dist_m:.2f} m, "
                 f"image position x={cx}, y={cy}"
             )
+
+            # Publish centroid and distance 
+            msg_out = PointStamped()
+            msg_out.header.stamp = self.get_clock().now().to_msg()
+            msg_out.header.frame_id = "camera"   # logical frame name
+
+            msg_out.point.x = float(cx)
+            msg_out.point.y = float(cy)
+            msg_out.point.z = float(dist_m)
+
+            self.obstacle_publisher.publish(msg_out)
+
         else:
             self.get_logger().debug("No rover within threshold distance.")
 

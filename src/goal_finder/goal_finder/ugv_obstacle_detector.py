@@ -15,7 +15,7 @@ from sensor_msgs.msg import Image, CompressedImage
 
 #for publishing obstacle info
 from geometry_msgs.msg import PointStamped
-from rclpy.qos import qos_profile_sensor_data
+# from rclpy.qos import qos_profile_sensor_data
 
 class UGVObstacleDetector(Node):
     def __init__(self):
@@ -36,11 +36,11 @@ class UGVObstacleDetector(Node):
 
         # Subscribers
         self.rgb_subscriber = self.create_subscription(
-            Image, self.rgb_topic, self.rgb_callback, qos_profile_sensor_data,
+            Image, self.rgb_topic, self.rgb_callback, 10
         )
         # depth is usually published as CompressedImage on *compressedDepth topics
         self.depth_subscriber = self.create_subscription(
-            CompressedImage, self.depth_topic, self.depth_callback, qos_profile_sensor_data,
+            CompressedImage, self.depth_topic, self.depth_callback, 10
         )
         
         # Publisher: centroid + distance

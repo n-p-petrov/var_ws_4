@@ -1,5 +1,5 @@
 import os
-
+import math
 import cv2
 import rclpy
 from ament_index_python.packages import get_package_share_directory
@@ -8,6 +8,7 @@ from rclpy.node import Node
 
 pkg_share = get_package_share_directory("triangulator")
 field_path = os.path.join(pkg_share, "imgs", "field.png")
+
 
 
 class TriangulatorVisualizer(Node):
@@ -39,6 +40,8 @@ class TriangulatorVisualizer(Node):
         self.field_height_px = self.field_image.shape[0] - 2 * self.pad
         self.filtered_point_in_image = None
         self.filtered_point_in_field = None
+        self.filtered_theta = None  
+
 
         self.pos_color = (0, 0, 255)  # BGR
         self.filtered_pos_color = (255, 0, 0)  # BGR
@@ -101,12 +104,48 @@ class TriangulatorVisualizer(Node):
                 self.filtered_pos_color,
                 2,
             )
+            if self.filtered_theta is not None:
+                self._draw_orientation_arrow(
+                    field_image_copy,
+                    self.filtered_point_in_image,
+                    self.filtered_theta,
+                    self.filtered_pos_color,
+                )
 
         cv2.imshow("Triangulation Visualizer", field_image_copy)
         cv2.waitKey(5)
 
+
+    def _draw_orientation_arrow(self, img, origin, theta, color):
+        """
+        Draw an arrow showing orientation.
+
+        theta: in radians, 0 = pointing right, positive CCW in field frame.
+        Image coordinates: x right, y down.
+        So y must be inverted relative to math convention.
+        """
+        arrow_length = 80  # pixels; tweak to taste
+
+        x0, y0 = origin
+
+        # Convert from field frame (standard math: up is +y) to image (down is +y)
+        x1 = int(x0 + arrow_length * math.cos(theta))
+        y1 = int(y0 + arrow_length * math.sin(theta))
+        self.get_logger().info(f"Drawing arrow from ({x0}, {y0}) to ({x1}, {y1}) with theta={theta} rad")
+
+        cv2.arrowedLine(
+            img,
+            (x0, y0),
+            (x1, y1),
+            color,
+            thickness=2,
+            tipLength=0.3,
+        )
+
     def pos_callback_filtered(self, point_in_field):
         self.filtered_point_in_field = point_in_field
+        self.filtered_theta = point_in_field.z  # NEW
+
         self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
             int(

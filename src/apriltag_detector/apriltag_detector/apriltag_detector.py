@@ -7,6 +7,7 @@ from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import Float32
 
 from apriltag_detector.utils import sharpen_img, upscale_img
 
@@ -97,7 +98,11 @@ class ApriltagDetector(Node):
         }
 
         # TODO fill this in (rads)
-        self.camera_pan_angle = 0.0
+        self.camera_pan_subscriber = self.create_subscription(Float32, "/camera_pan", self.camera_pan_callback, 10)
+        self.camera_pan_angle = None
+
+    def camera_pan_callback(self, msg):
+        self.camera_pan_angle = msg.data
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
@@ -228,6 +233,9 @@ class ApriltagDetector(Node):
                 robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
                 print("robot orientation", robot_orientation)
 
+                print("camera pan", self.camera_pan_angle)
+                robot_orientation = robot_orientation + self.camera_pan_angle
+                print("corrected robot orientation", robot_orientation)
 
                 # distance calculation
                 tvec = tvec.reshape(3)

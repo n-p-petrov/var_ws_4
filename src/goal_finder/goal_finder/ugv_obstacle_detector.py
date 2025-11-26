@@ -11,7 +11,7 @@ import rclpy
 from rclpy.node import Node
 
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image, CompressedImage
+from sensor_msgs.msg import Image
 
 #for publishing obstacle info
 from geometry_msgs.msg import PointStamped
@@ -68,11 +68,11 @@ class UGVObstacleDetector(Node):
         # depth encoding is "passthrough": typically 16UC1, depth in millimetres
         # self.bridge.compressed_imgmsg_to_cv2
         depth_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough") # it's in mm
-        
+
         self.latest_depth = depth_img
 
         # self.get_logger().info("Got depth frame")
-        self.get_logger().info(f"Depth frame received, shape={depth_img.shape}, dtype={depth_img.dtype}")
+        # self.get_logger().info(f"Depth frame received, shape={depth_img.shape}, dtype={depth_img.dtype}")
 
     def rgb_callback(self, msg: Image):
         """
@@ -84,7 +84,6 @@ class UGVObstacleDetector(Node):
         3. Run color+depth detection.
         """
         if self.latest_depth is None:
-            # self.get_logger().info("No depth frame available")
             self.get_logger().warn("RGB frame received but no depth yet.")
             return
 
@@ -174,10 +173,6 @@ class UGVObstacleDetector(Node):
         contours, _ = cv2.findContours(
             mask_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
         )
-        
-        self.get_logger().info(
-            f"contours: {contours}"
-        )   
 
         bounding_box_obstacle = None
         closest_robot = float("inf")

@@ -206,9 +206,7 @@ class ApriltagDetector(Node):
                 print("OBJ_SPACE_OPTIC_AXIS NORMALIZED", obj_space_optic_axis)
                 angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
                 print("ANGLE TO OPTIC AXIS", angle_to_optic_axis)
-                robot_orientation_wrt_apriltag = (
-                    angle_to_optic_axis + self.camera_pan_angle
-                )
+                robot_orientation_wrt_apriltag = angle_to_optic_axis
                 if self.camera_pan_angle:
                     print("camera pan", self.camera_pan_angle)
                     robot_orientation_wrt_apriltag = robot_orientation_wrt_apriltag + self.camera_pan_angle

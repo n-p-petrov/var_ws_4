@@ -67,6 +67,12 @@ class EkfNode(Node):
             self.camera_angle_callback,
             10
         )
+        self.orientation_sub = self.create_subscription(  # orientation of robot
+            Float32,
+            '/orientation',
+            self.orientation_callback,
+            10
+        )
 
         # --- Publisher ---
         self.filtered_pose_pub = self.create_publisher(
@@ -136,6 +142,25 @@ class EkfNode(Node):
 
         self.ekf_predict(self.v, self.omega, dt)
         self.publish_state()
+        
+    def orientation_callback(self, msg: Float32):
+        """
+        Direct measurement of theta_robot (e.g., from IMU).
+        This ONLY updates the 3rd state element (theta),
+        not the camera angle.
+        """
+        theta_meas = wrap_angle(msg.data)
+        z = np.array([[theta_meas]])
+
+        # H maps [x, y, theta, phi] -> [theta]
+        H = np.array([[0.0, 0.0, 1.0, 0.0]])
+
+        R_theta = np.array([[0.01]])  # measurement noise for theta
+
+        def h(x_vec):
+            return np.array([[x_vec[2, 0]]])  # theta
+
+        self.ekf_update(z, H, R_theta, h)
 
     # ------------- EKF Core -------------
 

@@ -70,7 +70,7 @@ class UGVObstacleDetector(Node):
             msg, desired_encoding="passthrough"
         ) # it's in mm
         self.latest_depth = depth_img
-        self.get_logger().debug("Got depth frame")
+        self.get_logger().info("Got depth frame")
 
     def rgb_callback(self, msg: Image):
         """
@@ -82,7 +82,7 @@ class UGVObstacleDetector(Node):
         3. Run color+depth detection.
         """
         if self.latest_depth is None:
-            self.get_logger().debug("No depth frame available")
+            self.get_logger().info("No depth frame available")
             return
 
         bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")

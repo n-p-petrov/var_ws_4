@@ -124,64 +124,61 @@ class ApriltagDetector(Node):
             # homography not used here; leave as zeros
             det.homography = [0.0] * 9
 
-            # PnP pose estimation
-            distance = -1.0  # default if we can't compute it
-            if self.camera_matrix is not None and self.dist_coeffs is not None:
-                # 3D model of tag corners in tag frame (lb, rb, rt, lt)
-                S = self.tag_size_m
-                object_points = np.array(
-                    [
-                        [-S / 2.0, S / 2.0, 0.0],  # lb
-                        [S / 2.0, S / 2.0, 0.0],  # rb
-                        [S / 2.0, -S / 2.0, 0.0],  # rt
-                        [-S / 2.0, -S / 2.0, 0.0],  # lt
-                    ],
-                    dtype=np.float32,
-                )
-
-                image_points = corners_scaled.astype(np.float32)
-
-                try:
-                    success, rvec, tvec = cv2.solvePnP(
-                        object_points,
-                        image_points,
-                        self.new_camera_matrix,  # intrinsics of the calibrated image
-                        None,
-                        flags=cv2.SOLVEPNP_ITERATIVE,
-                        # flags=cv2.SOLVEPNP_IPPE_SQUARE,
-                    )
-                    if success:
-                        tvec = tvec.reshape(3)  # CHANGE
-                        # distance = float(np.linalg.norm(tvec)) # CHANGE
-                        distance = float(
-                            np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
-                        )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
-                        self.get_logger().info(
-                            f"Tag {det.id}: "
-                            f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
-                            f"distance ≈ {distance:.3f} m"
-                        )
-                    else:
-                        self.get_logger().warn(
-                            f"PnP pose estimation failed for tag {det.id}"
-                        )
-                except cv2.error as e:
-                    self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
-                    success = False
-
-            else:
-                self.get_logger().warn(
-                    "Camera intrinsics not available yet; skipping PnP."
-                )
 
             # Store distance in 'goodness' so the visualizer can read it.
             # (decision_margin still holds the AprilTag margin.)
-            det.goodness = float(distance)
+            det.goodness = float(self.calculate_distance(corners_scaled, det.id))
 
             detection_array.detections.append(det)
 
         self.detections_publisher.publish(detection_array)
 
+    def calculate_distance(self, corners, id):
+        # PnP pose estimation
+        distance = -1.0  # default if we can't compute it
+        # 3D model of tag corners in tag frame (lb, rb, rt, lt)
+        S = self.tag_size_m
+        object_points = np.array(
+            [
+                [-S / 2.0, S / 2.0, 0.0],  # lb
+                [S / 2.0, S / 2.0, 0.0],  # rb
+                [S / 2.0, -S / 2.0, 0.0],  # rt
+                [-S / 2.0, -S / 2.0, 0.0],  # lt
+            ],
+            dtype=np.float32,
+        )
+
+        image_points = corners.astype(np.float32)
+
+        try:
+            success, rvec, tvec = cv2.solvePnP(
+                object_points,
+                image_points,
+                self.new_camera_matrix,  # intrinsics of the calibrated image
+                None,
+                flags=cv2.SOLVEPNP_ITERATIVE,
+                # flags=cv2.SOLVEPNP_IPPE_SQUARE,
+            )
+            if success:
+                tvec = tvec.reshape(3)  # CHANGE
+                # distance = float(np.linalg.norm(tvec)) # CHANGE
+                distance = float(
+                    np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
+                )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
+                self.get_logger().info(
+                    f"Tag {id}: "
+                    f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
+                    f"distance ≈ {distance:.3f} m"
+                )
+            else:
+                self.get_logger().warn(
+                    f"PnP pose estimation failed for tag {id}"
+                )
+        except cv2.error as e:
+            self.get_logger().warn(f"solvePnP failed for tag {id}: {e}")
+            success = False
+
+        return distance
 
 def main(args=None):
     rclpy.init(args=args)

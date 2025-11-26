@@ -102,7 +102,7 @@ class ApriltagDetector(Node):
         self.camera_pan_angle = None
 
     def camera_pan_callback(self, msg):
-        self.camera_pan_angle = msg.data
+        self.camera_pan_angle = float(msg.data)
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):

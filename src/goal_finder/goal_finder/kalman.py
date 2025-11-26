@@ -4,8 +4,9 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
-from geometry_msgs.msg import Twist, Pose2D
+from geometry_msgs.msg import Twist, Pose2D, Point
 from std_msgs.msg import Float32
+
 
 
 def wrap_angle(a: float) -> float:
@@ -55,8 +56,8 @@ class EkfNode(Node):
         )
 
         self.triangulated_pos_sub = self.create_subscription(
-            Pose2D,
-            '/triangulated_position',
+            Point,
+            '/triangulated_pos',
             self.triangulated_callback,
             10
         )
@@ -76,7 +77,8 @@ class EkfNode(Node):
 
         # --- Publisher ---
         self.filtered_pose_pub = self.create_publisher(
-            Pose2D,
+            # Pose2D,
+            Point,
             '/filtered_pose',
             10
         )
@@ -89,14 +91,18 @@ class EkfNode(Node):
     # ------------- Callbacks -------------
 
     def cmd_vel_callback(self, msg: Twist):
-        self.v = msg.linear.x
+        self.v = msg.linear.x *1000
         self.omega = msg.angular.z
 
-    def triangulated_callback(self, msg: Pose2D):
+    def triangulated_callback(self, msg: Point):
         """
         (x, y) measurement from triangulator.
         Theta in Pose2D is ignored here.
         """
+        # Triangulator publishes (-1, -1) when it has no valid fix; ignore those.
+        if msg.x < 0.0 or msg.y < 0.0:
+            return
+
         z = np.array([[msg.x],
                       [msg.y]])
 
@@ -222,7 +228,9 @@ class EkfNode(Node):
         pose_msg.x = float(self.x[0, 0])
         pose_msg.y = float(self.x[1, 0])
         pose_msg.theta = float(self.x[2, 0])
-        self.filtered_pose_pub.publish(pose_msg)
+        point_msg = Point(x = pose_msg.x, y = pose_msg.y, z = 0.0)
+        self.filtered_pose_pub.publish(point_msg)
+        # self.filtered_pose_pub.publish(pose_msg)
         
         self.get_logger().info(f"x={pose_msg.x:.2f}, y={pose_msg.y:.2f}, "
                                    f"theta={pose_msg.theta:.2f}, phi={self.x[3,0]:.2f}")

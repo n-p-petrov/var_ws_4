@@ -32,6 +32,9 @@ class TriangulatorVisualizer(Node):
         self.field_max_x = 7510
         self.field_max_y = 10520
 
+        self.field_width_px = self.field_image.shape[1] - 2 * self.pad
+        self.field_height_px = self.field_image.shape[0] - 2 * self.pad
+
         self.pos_color = (0, 0, 255)  # BGR
 
     def pos_callback(self, point_in_field):
@@ -39,11 +42,24 @@ class TriangulatorVisualizer(Node):
         point_in_image = (
             int(
                 self.pad
-                + point_in_field.x / self.field_max_x * self.field_image.shape[1]
+
+                + min(
+                    max(
+                        point_in_field.x / self.field_max_x * self.field_width_px,
+                        0,
+                    ),
+                    self.field_width_px - 1,
+                )
             ),
             int(
                 self.pad
-                + point_in_field.y / self.field_max_y * self.field_image.shape[0]
+                + min(
+                    max(
+                        point_in_field.y / self.field_max_y * self.field_height_px,
+                        0,
+                    ),
+                    self.field_height_px - 1,
+                )
             ),
         )
         self.get_logger().info(f"pos in image: {point_in_image}")

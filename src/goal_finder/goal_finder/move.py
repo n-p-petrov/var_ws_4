@@ -13,6 +13,7 @@ from apriltag_detector.apriltag_detector import ApriltagDetector
 from goal_finder.kalman import EkfNode
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from rclpy.executors import MultiThreadedExecutor
 
 
 LINEAR_VELOCITY = 0.2
@@ -30,18 +31,27 @@ def main(args=None):
     # print("Setting camera orientation...")
     # set_camera_joint_once()
     
+    executor = MultiThreadedExecutor()
+    managed_nodes = []
+
     try:
         print("Initializing the apriltag detector...")
         apriltag_detector = ApriltagDetector()
-        rclpy.spin(apriltag_detector)
-        
+        managed_nodes.append(apriltag_detector)
+
         print("Initializing the triangulator...")
         triangulator = Triangulator()
-        rclpy.spin(triangulator)
-        
+        managed_nodes.append(triangulator)
+
         print("Starting the kalman filter loop...")
         kalman = EkfNode()
-        rclpy.spin(kalman)
+        managed_nodes.append(kalman)
+
+        for node in managed_nodes:
+            executor.add_node(node)
+
+        print("Spinning executor with detector, triangulator, and EKF nodes...")
+        executor.spin()
 
         # some moving here 
         
@@ -56,6 +66,19 @@ def main(args=None):
             time.sleep(0.3)
 
     finally:
+        for node in managed_nodes:
+            try:
+                executor.remove_node(node)
+            except Exception:
+                pass
+
+            try:
+                node.destroy_node()
+            except Exception:
+                pass
+
+        executor.shutdown()
+
         try:
             drive_publisher.destroy_node()
         except Exception:

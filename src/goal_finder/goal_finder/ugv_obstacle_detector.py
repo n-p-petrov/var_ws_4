@@ -36,11 +36,11 @@ class UGVObstacleDetector(Node):
 
         # Subscribers
         self.rgb_subscriber = self.create_subscription(
-            Image, self.rgb_topic, self.rgb_callback, 10, qos_profile_sensor_data,
+            Image, self.rgb_topic, self.rgb_callback, qos_profile_sensor_data,
         )
         # depth is usually published as CompressedImage on *compressedDepth topics
         self.depth_subscriber = self.create_subscription(
-            CompressedImage, self.depth_topic, self.depth_callback, 10, qos_profile_sensor_data,
+            CompressedImage, self.depth_topic, self.depth_callback, qos_profile_sensor_data,
         )
         
         # Publisher: centroid + distance

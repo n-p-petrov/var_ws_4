@@ -7,6 +7,7 @@ from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
 from cv_bridge import CvBridge
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import Float32
 
 from apriltag_detector.utils import sharpen_img, upscale_img
 
@@ -32,7 +33,11 @@ class ApriltagDetector(Node):
         self.detections_publisher = self.create_publisher(
             AprilTagDetectionArray, self.apriltag_topic, 10
         )
-
+        # orientation publisher
+        self.robot_orientation_publisher = self.create_publisher(
+            Float32, "/orientation", 10
+        )
+        
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
@@ -72,6 +77,36 @@ class ApriltagDetector(Node):
             (w, h),
             0,  # alpha=0 keeps a clean free-of-black-borders image
         )
+
+        self.tag_orientation = {
+            # RADIANS
+            # angle between vector perpendicular to apriltag facing apriltag and x axis of the field
+
+            # goal closer to where we sit
+            1: np.pi / 2,
+
+            # door side 
+            2: np.pi,
+            4: np.pi,
+            6: np.pi, 
+
+            # window side
+            3: 0.0,
+            5: 0.0,
+            7: 0.0,
+
+            # arnold desk goal
+            8: -np.pi / 2,
+            9: -np.pi / 2,
+            10: -np.pi / 2,
+        }
+
+        # TODO fill this in (rads)
+        self.camera_pan_subscriber = self.create_subscription(Float32, "/camera_pan", self.camera_pan_callback, 10)
+        self.camera_pan_angle = None
+
+    def camera_pan_callback(self, msg):
+        self.camera_pan_angle = float(msg.data)
 
     # Image callback: detect tags and publish detections
     def listener_callback(self, img_msg: Image):
@@ -124,63 +159,104 @@ class ApriltagDetector(Node):
             # homography not used here; leave as zeros
             det.homography = [0.0] * 9
 
-            # PnP pose estimation
-            distance = -1.0  # default if we can't compute it
-            if self.camera_matrix is not None and self.dist_coeffs is not None:
-                # 3D model of tag corners in tag frame (lb, rb, rt, lt)
-                S = self.tag_size_m
-                object_points = np.array(
-                    [
-                        [-S / 2.0, S / 2.0, 0.0],  # lb
-                        [S / 2.0, S / 2.0, 0.0],  # rb
-                        [S / 2.0, -S / 2.0, 0.0],  # rt
-                        [-S / 2.0, -S / 2.0, 0.0],  # lt
-                    ],
-                    dtype=np.float32,
-                )
-
-                image_points = corners_scaled.astype(np.float32)
-
-                try:
-                    success, rvec, tvec = cv2.solvePnP(
-                        object_points,
-                        image_points,
-                        self.new_camera_matrix,  # intrinsics of the calibrated image
-                        None,
-                        flags=cv2.SOLVEPNP_ITERATIVE,
-                        # flags=cv2.SOLVEPNP_IPPE_SQUARE,
-                    )
-                    if success:
-                        tvec = tvec.reshape(3)  # CHANGE
-                        # distance = float(np.linalg.norm(tvec)) # CHANGE
-                        distance = float(
-                            np.sqrt(tvec[0] ** 2 + tvec[2] ** 2)
-                        )  #  maaaaaaaaaaaaaybe exclude the first one, not sure
-                        self.get_logger().info(
-                            f"Tag {det.id}: "
-                            f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
-                            f"distance ≈ {distance:.3f} m"
-                        )
-                    else:
-                        self.get_logger().warn(
-                            f"PnP pose estimation failed for tag {det.id}"
-                        )
-                except cv2.error as e:
-                    self.get_logger().warn(f"solvePnP failed for tag {det.id}: {e}")
-                    success = False
-
-            else:
-                self.get_logger().warn(
-                    "Camera intrinsics not available yet; skipping PnP."
-                )
-
             # Store distance in 'goodness' so the visualizer can read it.
             # (decision_margin still holds the AprilTag margin.)
-            det.goodness = float(distance)
+            det.goodness = float(
+                self.calculate_distance(corners_scaled, (cx_scaled, cy_scaled), det.id)
+            )
 
             detection_array.detections.append(det)
 
         self.detections_publisher.publish(detection_array)
+
+    def calculate_distance(self, corners, center, id):
+        # PnP pose estimation
+        distance = -1.0  # default if we can't compute it
+        # 3D model of tag corners in tag frame (lb, rb, rt, lt)
+        S = self.tag_size_m
+        object_points = np.array(
+            [
+                [-S / 2.0, S / 2.0, 0.0],  # lb
+                [S / 2.0, S / 2.0, 0.0],  # rb
+                [S / 2.0, -S / 2.0, 0.0],  # rt
+                [-S / 2.0, -S / 2.0, 0.0],  # lt
+            ],
+            dtype=np.float32,
+        )
+
+        image_points = corners.astype(np.float32)
+
+        try:
+            success, rvec, tvec = cv2.solvePnP(
+                object_points,
+                image_points,
+                self.new_camera_matrix,  # intrinsics of the calibrated image
+                None,
+                flags=cv2.SOLVEPNP_ITERATIVE,
+                # flags=cv2.SOLVEPNP_IPPE_SQUARE,
+            )
+            if success:
+                # orientation calculation
+                print("RVEC", rvec)
+                obj_space_R, _ = cv2.Rodrigues(rvec)
+                print("ONJ_SPACE_R", obj_space_R)
+                inv_obj_space_R = np.linalg.inv(obj_space_R)
+                print("INV_ONJ_SPACE_R", inv_obj_space_R)
+                obj_space_optic_axis = inv_obj_space_R @ np.array([0, 0, 1]).T
+                print("OBJ_SPACE_OPTIC_AXIS", obj_space_optic_axis)
+                obj_space_optic_axis = obj_space_optic_axis / np.linalg.norm(
+                    obj_space_optic_axis
+                )
+                print("OBJ_SPACE_OPTIC_AXIS NORMALIZED", obj_space_optic_axis)
+                angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
+                print("ANGLE TO OPTIC AXIS", angle_to_optic_axis)
+
+                inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
+                print("inv intrinsic matr", inv_intrinsic_matrix)
+                ray_camera_apriltag_center = inv_obj_space_R @ inv_intrinsic_matrix @ np.array([center[0], center[1], 1]).T
+                print("ray from camera to apriltag center", ray_camera_apriltag_center)
+                a = ray_camera_apriltag_center.copy()
+                a[2] = 0.0
+                print("A", a)
+                b = obj_space_optic_axis
+                b[2] = 0.0
+                print("B", b)
+                cross = np.cross(a, b)
+                print("cross", cross)
+
+                if cross[2] < 0:
+                    angle_to_optic_axis = - angle_to_optic_axis
+                # when the angle is positive the viewing axis is to the right of the apriltag
+                # when the angle is negative the viewing axis is to the left of the apriltag
+                print("final angle", angle_to_optic_axis)
+
+                robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
+                print("camera orientation", robot_orientation)
+
+                if self.camera_pan_angle:
+                    robot_orientation = (
+                        robot_orientation - self.camera_pan_angle
+                    )
+                    print("robot orientation", robot_orientation)
+                
+                robot_orientation_msg = Float32()
+                robot_orientation_msg.data = float(robot_orientation)
+                self.robot_orientation_publisher.publish(robot_orientation_msg)
+
+                # distance calculation
+                tvec = tvec.reshape(3)
+                distance = float(np.sqrt(tvec[0] ** 2 + tvec[2] ** 2))
+                self.get_logger().info(
+                    f"Tag {id}: "
+                    f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
+                    f"distance ≈ {distance:.3f} m"
+                )
+            else:
+                self.get_logger().warn(f"PnP pose estimation failed for tag {id}")
+        except cv2.error as e:
+            self.get_logger().warn(f"solvePnP failed for tag {id}: {e}")
+
+        return distance
 
 
 def main(args=None):

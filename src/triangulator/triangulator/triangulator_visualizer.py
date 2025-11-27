@@ -29,6 +29,7 @@ class TriangulatorVisualizer(Node):
         )
         self.field_max_x = 7510
         self.field_max_y = 10520
+
         self.field_width_px = self.field_image.shape[1] - 2 * self.pad
         self.field_height_px = self.field_image.shape[0] - 2 * self.pad
 
@@ -177,6 +178,7 @@ class TriangulatorVisualizer(Node):
         point_in_image = (
             int(
                 self.pad
+
                 + min(
                     max(
                         point_in_field.x / self.field_max_x * self.field_width_px,

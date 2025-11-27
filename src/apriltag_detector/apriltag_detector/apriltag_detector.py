@@ -97,7 +97,6 @@ class ApriltagDetector(Node):
             10: -np.pi / 2,
         }
 
-        # TODO fill this in (rads)
         self.camera_pan_subscriber = self.create_subscription(
             Float32, "/camera_pan", self.camera_pan_callback, 10
         )
@@ -240,7 +239,9 @@ class ApriltagDetector(Node):
         # when the angle is positive the viewing axis is to the right of the apriltag
         # when the angle is negative the viewing axis is to the left of the apriltag
 
-        self.get_logger().info(f"Camera orientation wrt apriltag: {angle_to_optic_axis}")
+        self.get_logger().info(
+            f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
+        )
         robot_orientation = angle_to_optic_axis + self.tag_orientation[tag_id]
 
         if self.camera_pan_angle:

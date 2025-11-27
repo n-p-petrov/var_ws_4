@@ -77,7 +77,7 @@ class GradientAngle(Node):
     # ----- callbacks -----
 
     def obstacle_callback(self, msg:PointStamped):
-        if self.r_angle and self.r_pos:
+        if self.r_angle and self.r_pos is not None:
             u = msg.point.x
             v = msg.point.y
             z = msg.point.z
@@ -95,7 +95,7 @@ class GradientAngle(Node):
     #     self.r_angle = msg.position[0]
 
     def timer_callback(self):
-        if self.r_angle and self.r_pos:
+        if self.r_angle and self.r_pos is not None:
             grad_angle = self.grad_angle()
     
     # ----- coordinate transformations -----

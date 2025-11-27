@@ -139,7 +139,7 @@ class GradientAngle(Node):
     def U_rep_grad(self, radius=250, beta=1.0):
         if self.r_angle and self.r_pos is not None:
             d = np.linalg.norm(self.r_pos - self.obs_pos)
-            if d <= self.rho:
+            if d <= radius:
                 grad = -beta * ((1 / d) - (1 / radius)) * ((self.r_pos - self.obs_pos)/d**3)
             else:
                 grad = np.array([0.0, 0.0])

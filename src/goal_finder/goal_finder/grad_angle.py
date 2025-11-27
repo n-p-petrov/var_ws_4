@@ -15,6 +15,11 @@ class GradientAngle(Node):
         self.pose_topic = "/filtered_pose"
         self.obstacle_topic = "/obstacle_detected"
 
+        self.r_pos = None
+        self.r_angle = None
+        self.obs_pos = None
+
+
         '''
         (0,0)
             +--+-+-------+-+--+

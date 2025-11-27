@@ -26,7 +26,8 @@ setup(
         'console_scripts': [
             'kalman = goal_finder.kalman:main',
             'move = goal_finder.move:main',
-            
+            'ugv_obstacle_detector = goal_finder.ugv_obstacle_detector:main',
+            'gradients = goal_finder.grad_angle:main'
         ],
     },
 )

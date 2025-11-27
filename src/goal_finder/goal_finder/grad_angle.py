@@ -77,7 +77,7 @@ class GradientAngle(Node):
     # ----- callbacks -----
 
     def obstacle_callback(self, msg:PointStamped):
-        print("obstacle_callback", msg)
+        #print("obstacle_callback", msg)
         if self.r_angle and self.r_pos is not None:
             u = msg.point.x
             v = msg.point.y
@@ -86,7 +86,7 @@ class GradientAngle(Node):
                 self.obs_pos = self.obstacle_world_coords(u,v,z)
 
     def pose_callback(self, msg:Pose2D):
-        print("pose_callback", msg)
+        #print("pose_callback", msg)
         self.r_pos = np.array([msg.x, msg.y])
         self.r_angle = msg.theta
 

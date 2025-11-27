@@ -5,7 +5,7 @@ import cv2
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from apriltag_msgs.msg import AprilTagDetectionArray
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose2D
 from rclpy.node import Node
 
 pkg_share = get_package_share_directory("triangulator")
@@ -29,6 +29,7 @@ class TriangulatorVisualizer(Node):
         )
         self.field_max_x = 7510
         self.field_max_y = 10520
+
         self.field_width_px = self.field_image.shape[1] - 2 * self.pad
         self.field_height_px = self.field_image.shape[0] - 2 * self.pad
 
@@ -64,7 +65,7 @@ class TriangulatorVisualizer(Node):
                 2: (760, 8080),
                 3: (6750, 8080),
                 4: (760, 5250),
-                5: (6750, 4500),
+                5: (6750, 5250),
                 6: (620, 3380),
                 7: (7510 - 110, 3380),
                 8: (890, 760),
@@ -84,6 +85,7 @@ class TriangulatorVisualizer(Node):
         self.undetected_apriltag_color = (0, 0, 255)  # red
         self.apriltag_border_color = (0, 0, 0)  # black
         self.apriltag_square_size = 10
+        self.apriltag_distance_color = (255, 255, 255)
 
         # draw red squares on field image
         for _, (px, py) in self.apriltag_coordinates.items():
@@ -121,6 +123,7 @@ class TriangulatorVisualizer(Node):
             px = int(px)
             py = int(py)
 
+            # tag
             x1 = px - self.apriltag_square_size
             y1 = py - self.apriltag_square_size
             x2 = px + self.apriltag_square_size
@@ -141,6 +144,18 @@ class TriangulatorVisualizer(Node):
                 thickness=2,
             )
 
+            # distance
+            distance_in_mm = detection.goodness * 1000
+            distance_in_pixels = int(distance_in_mm / self.field_max_x * self.field_width_px)
+            cv2.circle(
+                self.field_to_display,
+                center=(px, py),
+                radius=distance_in_pixels,
+                color=self.apriltag_distance_color,
+                thickness=2,
+                lineType=cv2.LINE_8
+            )
+
     # --- Position visualization functions ---
 
     def init_pos_fields(self):
@@ -149,7 +164,7 @@ class TriangulatorVisualizer(Node):
         )
 
         self.filtered_pos_subsciber = self.create_subscription(
-            Point, "/filtered_pose", self.pos_callback_filtered, 10
+            Pose2D, "/filtered_pose", self.pos_callback_filtered, 10
         )
 
         self.filtered_point_in_image = None
@@ -164,6 +179,7 @@ class TriangulatorVisualizer(Node):
         point_in_image = (
             int(
                 self.pad
+
                 + min(
                     max(
                         point_in_field.x / self.field_max_x * self.field_width_px,
@@ -259,7 +275,7 @@ class TriangulatorVisualizer(Node):
 
     def pos_callback_filtered(self, point_in_field):
         self.filtered_point_in_field = point_in_field
-        self.filtered_theta = point_in_field.z  # NEW
+        self.filtered_theta = point_in_field.theta # NEW
 
         self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (

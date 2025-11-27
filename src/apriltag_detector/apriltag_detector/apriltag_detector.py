@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import math
+
 import cv2
 import numpy as np
 import rclpy
@@ -101,6 +103,9 @@ class ApriltagDetector(Node):
             Float32, "/camera_pan", self.camera_pan_callback, 10
         )
         self.camera_pan_angle = None
+
+        self.last_orientation = None
+        self.orientation_alpha = 0.3  # 0..1, smaller = smoother
 
     def camera_pan_callback(self, msg):
         self.camera_pan_angle = float(msg.data)
@@ -247,10 +252,29 @@ class ApriltagDetector(Node):
         if self.camera_pan_angle:
             robot_orientation = robot_orientation - self.camera_pan_angle
 
-        self.get_logger().info(f"Robot orientation: {robot_orientation}")
+        robot_orientation = wrap_angle(robot_orientation)
+        # --- Smooth it ---
+        # if self.last_orientation is None:
+        #     self.last_orientation = robot_orientation
+        # else:
+        #     diff = wrap_angle(robot_orientation - self.last_orientation)
+        #     self.last_orientation = wrap_angle(
+        #         self.last_orientation + self.orientation_alpha * diff
+        #     )
+        # robot_orientation = self.last_orientation
+        #
         robot_orientation_msg = Float32()
         robot_orientation_msg.data = float(robot_orientation)
+        self.get_logger().info(
+            f"Publishing robot orientation: {robot_orientation_msg.data} radians"
+        )
         self.robot_orientation_publisher.publish(robot_orientation_msg)
+
+        return robot_orientation
+
+
+def wrap_angle(a: float) -> float:
+    return (a + math.pi) % (2.0 * math.pi) - math.pi
 
 
 def main(args=None):

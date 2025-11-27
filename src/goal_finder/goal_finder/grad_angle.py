@@ -98,16 +98,18 @@ class GradientAngle(Node):
         self.r_angle = msg.theta
 
     def publish_state(self):
-        grad_msg = Point()
-        grad_msg.x = self.gradient[0]
-        grad_msg.y = self.gradient[1]
+        if self.gradient is not None:
+            grad_msg = Point()
+            grad_msg.x = self.gradient[0]
+            grad_msg.y = self.gradient[1]
+            self.gradient_pub.publish(grad_msg)
 
-        obs_msg = Point()
-        obs_msg.x = self.obs_pos[0]
-        obs_msg.y = self.obs_pos[1]
+        if self.obs_pos is not None:
+            obs_msg = Point()
+            obs_msg.x = self.obs_pos[0]
+            obs_msg.y = self.obs_pos[1]
+            self.obstacle_pub.publish(obs_msg)
 
-        self.gradient_pub.publish(grad_msg)
-        self.obstacle_pub.publish(obs_msg)
     
     def timer_callback(self):
         if self.r_angle and self.r_pos is not None and self.obs_pos is not None:

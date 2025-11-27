@@ -37,7 +37,7 @@ class ApriltagDetector(Node):
         self.robot_orientation_publisher = self.create_publisher(
             Float32, "/orientation", 10
         )
-        
+
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
@@ -81,20 +81,16 @@ class ApriltagDetector(Node):
         self.tag_orientation = {
             # RADIANS
             # angle between vector perpendicular to apriltag facing apriltag and x axis of the field
-
             # goal closer to where we sit
             1: np.pi / 2,
-
-            # door side 
+            # door side
             2: np.pi,
             4: np.pi,
-            6: np.pi, 
-
+            6: np.pi,
             # window side
             3: 0.0,
             5: 0.0,
             7: 0.0,
-
             # arnold desk goal
             8: -np.pi / 2,
             9: -np.pi / 2,
@@ -102,7 +98,9 @@ class ApriltagDetector(Node):
         }
 
         # TODO fill this in (rads)
-        self.camera_pan_subscriber = self.create_subscription(Float32, "/camera_pan", self.camera_pan_callback, 10)
+        self.camera_pan_subscriber = self.create_subscription(
+            Float32, "/camera_pan", self.camera_pan_callback, 10
+        )
         self.camera_pan_angle = None
 
     def camera_pan_callback(self, msg):
@@ -169,7 +167,7 @@ class ApriltagDetector(Node):
 
         self.detections_publisher.publish(detection_array)
 
-    def calculate_distance(self, corners, center, id):
+    def calculate_distance(self, corners, img_space_center, id):
         # PnP pose estimation
         distance = -1.0  # default if we can't compute it
         # 3D model of tag corners in tag frame (lb, rb, rt, lt)
@@ -197,51 +195,7 @@ class ApriltagDetector(Node):
             )
             if success:
                 # orientation calculation
-                print("RVEC", rvec)
-                obj_space_R, _ = cv2.Rodrigues(rvec)
-                print("ONJ_SPACE_R", obj_space_R)
-                inv_obj_space_R = np.linalg.inv(obj_space_R)
-                print("INV_ONJ_SPACE_R", inv_obj_space_R)
-                obj_space_optic_axis = inv_obj_space_R @ np.array([0, 0, 1]).T
-                print("OBJ_SPACE_OPTIC_AXIS", obj_space_optic_axis)
-                obj_space_optic_axis = obj_space_optic_axis / np.linalg.norm(
-                    obj_space_optic_axis
-                )
-                print("OBJ_SPACE_OPTIC_AXIS NORMALIZED", obj_space_optic_axis)
-                angle_to_optic_axis = np.arccos(obj_space_optic_axis[-1])
-                print("ANGLE TO OPTIC AXIS", angle_to_optic_axis)
-
-                inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
-                print("inv intrinsic matr", inv_intrinsic_matrix)
-                ray_camera_apriltag_center = inv_obj_space_R @ inv_intrinsic_matrix @ np.array([center[0], center[1], 1]).T
-                print("ray from camera to apriltag center", ray_camera_apriltag_center)
-                a = ray_camera_apriltag_center.copy()
-                a[2] = 0.0
-                print("A", a)
-                b = obj_space_optic_axis
-                b[2] = 0.0
-                print("B", b)
-                cross = np.cross(a, b)
-                print("cross", cross)
-
-                if cross[2] < 0:
-                    angle_to_optic_axis = - angle_to_optic_axis
-                # when the angle is positive the viewing axis is to the right of the apriltag
-                # when the angle is negative the viewing axis is to the left of the apriltag
-                print("final angle", angle_to_optic_axis)
-
-                robot_orientation = angle_to_optic_axis + self.tag_orientation[id]
-                print("camera orientation", robot_orientation)
-
-                if self.camera_pan_angle:
-                    robot_orientation = (
-                        robot_orientation - self.camera_pan_angle
-                    )
-                    print("robot orientation", robot_orientation)
-                
-                robot_orientation_msg = Float32()
-                robot_orientation_msg.data = float(robot_orientation)
-                self.robot_orientation_publisher.publish(robot_orientation_msg)
+                self.calculate_orientation(rvec, img_space_center, id)
 
                 # distance calculation
                 tvec = tvec.reshape(3)
@@ -257,6 +211,45 @@ class ApriltagDetector(Node):
             self.get_logger().warn(f"solvePnP failed for tag {id}: {e}")
 
         return distance
+
+    def calculate_orientation(self, rvec, img_space_center, tag_id):
+        obj_space_R, _ = cv2.Rodrigues(rvec)
+        inv_obj_space_R = np.linalg.inv(obj_space_R)
+
+        obj_space_optic_axis = inv_obj_space_R @ np.array([0, 0, 1]).T
+        obj_space_optic_axis = obj_space_optic_axis / np.linalg.norm(
+            obj_space_optic_axis
+        )
+        angle_to_optic_axis = np.arccos(obj_space_optic_axis[2])
+
+        inv_intrinsic_matrix = np.linalg.inv(self.new_camera_matrix)
+        obj_space_ray_from_camera_apriltag_center = (
+            inv_obj_space_R
+            @ inv_intrinsic_matrix
+            @ np.array([img_space_center[0], img_space_center[1], 1]).T
+        )
+
+        a = obj_space_ray_from_camera_apriltag_center.copy()
+        a[1] = 0.0
+        b = obj_space_optic_axis
+        b[1] = 0.0
+        cross = np.cross(a, b)
+
+        if cross[1] < 0:
+            angle_to_optic_axis = -angle_to_optic_axis
+        # when the angle is positive the viewing axis is to the right of the apriltag
+        # when the angle is negative the viewing axis is to the left of the apriltag
+
+        self.get_logger().info(f"Camera orientation wrt apriltag: {angle_to_optic_axis}")
+        robot_orientation = angle_to_optic_axis + self.tag_orientation[tag_id]
+
+        if self.camera_pan_angle:
+            robot_orientation = robot_orientation - self.camera_pan_angle
+
+        self.get_logger().info(f"Robot orientation: {robot_orientation}")
+        robot_orientation_msg = Float32()
+        robot_orientation_msg.data = float(robot_orientation)
+        self.robot_orientation_publisher.publish(robot_orientation_msg)
 
 
 def main(args=None):

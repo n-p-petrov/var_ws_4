@@ -1,11 +1,12 @@
 import numpy as np
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PointStamped, Pose2D
+from geometry_msgs.msg import PointStamped, Pose2D, Point
 from std_msgs.msg import Float32
+import argparse
 
 class GradientAngle(Node):
-    def __init__(self):
+    def __init__(self, target):
         super().__init__("grad_angle")
 
     # ----- constants -----
@@ -18,7 +19,8 @@ class GradientAngle(Node):
         self.r_pos = None
         self.r_angle = None
         self.obs_pos = None
-
+        self.grad_angle = None
+        self.gradient = None
 
         '''
         (0,0)
@@ -50,6 +52,8 @@ class GradientAngle(Node):
             "J":    np.array([1700.0,   8050.0]),
         }
 
+        self.target = self.targets[target]
+
         self.K = np.array([
             [1011.2320556640625,    0.0,                    643.5490112304688],
             [0.0,                   1011.1708374023438,     373.5168151855469],
@@ -65,14 +69,17 @@ class GradientAngle(Node):
         )
         self.timer = self.create_timer(0.1, self.timer_callback)
 
+        # publish
+        # gradient
+        # obstacle location
 
-        # self.position_sub = self.create_subscription(
-        #     Pose2D, self.position_topic, self.position_callback, 10
-        # )
-        # self.orient_sub = self.create_subscription(
-        #     Float32, self.orient_topic, self.orient_callback, 10
-        # )
-        # angle publisher
+        self.gradient_pub = self.create_publisher(
+            Point, "/grad/gradient", 10
+        )
+        self.obstacle_pub = self.create_publisher(
+            Point, "grad/obstacle", 10
+        )
+
 
     # ----- callbacks -----
 
@@ -90,15 +97,22 @@ class GradientAngle(Node):
         self.r_pos = np.array([msg.x, msg.y])
         self.r_angle = msg.theta
 
-    # def position_callback(self, msg:Pose2D):
-    #     self.r_pos = np.array([msg.x, msg.y])
+    def publish_state(self):
+        grad_msg = Point()
+        grad_msg.x = self.gradient[0]
+        grad_msg.y = self.gradient[1]
 
-    # def orient_callback(self, msg:Float32):
-    #     self.r_angle = msg.position[0]
+        obs_msg = Point()
+        obs_msg.x = self.obs_pos[0]
+        obs_msg.y = self.obs_pos[1]
 
+        self.gradient_pub.publish(grad_msg)
+        self.obstacle_pub.publish(obs_msg)
+    
     def timer_callback(self):
         if self.r_angle and self.r_pos is not None and self.obs_pos is not None:
-            grad_angle = self.grad_angle()
+            self.grad_angle = self.calc_grad_angle()
+        self.publish_state()
     
     # ----- coordinate transformations -----
 
@@ -123,17 +137,17 @@ class GradientAngle(Node):
             obs_relto_robot = rho * (R@v)
             obs_world = np.array(self.r_pos) - obs_relto_robot
 
-            print("[OBSTACLES]")
-            print(f"obstacle relto robot:   {obs_relto_robot}")
-            print(f"obs in world coord  :   {obs_world}")
+            # print("[OBSTACLES]")
+            # print(f"obstacle relto robot:   {obs_relto_robot}")
+            # print(f"obs in world coord  :   {obs_world}")
 
             return obs_world
     
     # ----- gradients -----
 
-    def U_att_grad(self, t="C", alpha=1.0):
+    def U_att_grad(self, alpha=1.0):
         if self.r_angle and self.r_pos is not None:
-            grad = alpha * (self.r_pos - self.targets[t])
+            grad = alpha * (self.r_pos - self.target)
             return grad
     
     def U_rep_grad(self, radius=250, beta=1.0):
@@ -145,22 +159,26 @@ class GradientAngle(Node):
                 grad = np.array([0.0, 0.0])
             return grad
     
-    def grad_angle(self):
+    def calc_grad_angle(self):
         if self.r_angle and self.r_pos is not None:
             gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
             grad_angle = np.arctan2(gradient[1], gradient[0])
+            self.gradient = gradient
 
-            print("[GRADIENTS]")
-            print(f"gradient :   {gradient}")
-            print(f"angle    :   {grad_angle:.3f}")
-            print(f"magnitude:   {np.linalg.norm(gradient)}")
+            # print("[GRADIENTS]")
+            # print(f"gradient :   {gradient}")
+            print(f"Angle: {grad_angle:.3f} | Magnitude {np.linalg.norm(gradient)}")
+            # print(f"magnitude:   {np.linalg.norm(gradient)}")
 
             return grad_angle
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    ekf_node = GradientAngle()
-    rclpy.spin(ekf_node)
-    ekf_node.destroy_node()
+def main(ros_args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", type=str, default="C")
+    args = parser.parse_args()
+    rclpy.init(args=ros_args)
+    grad_node = GradientAngle(target=args.target)
+    rclpy.spin(grad_node)
+    grad_node.destroy_node()
     rclpy.shutdown()

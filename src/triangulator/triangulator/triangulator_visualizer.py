@@ -36,7 +36,7 @@ class TriangulatorVisualizer(Node):
         self.init_pos_fields()
 
         self.field_to_display = self.field_image.copy()
-        self.display_timer = self.create_timer(1 / 20, self.display_callback)
+        self.display_timer = self.create_timer(1 / 15, self.display_callback)
 
     def display_callback(self):
         """
@@ -117,6 +117,8 @@ class TriangulatorVisualizer(Node):
         """
         for  detection in msg.detections:
             (px, py) = self.apriltag_coordinates[detection.id]
+            px = int(px)
+            py = int(py)
 
             x1 = px - self.apriltag_square_size
             y1 = py - self.apriltag_square_size

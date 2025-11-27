@@ -5,7 +5,7 @@ import cv2
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from apriltag_msgs.msg import AprilTagDetectionArray
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose2D
 from rclpy.node import Node
 
 pkg_share = get_package_share_directory("triangulator")
@@ -162,7 +162,7 @@ class TriangulatorVisualizer(Node):
         )
 
         self.filtered_pos_subsciber = self.create_subscription(
-            Point, "/filtered_pose", self.pos_callback_filtered, 10
+            Pose2D, "/filtered_pose", self.pos_callback_filtered, 10
         )
 
         self.filtered_point_in_image = None
@@ -272,7 +272,7 @@ class TriangulatorVisualizer(Node):
 
     def pos_callback_filtered(self, point_in_field):
         self.filtered_point_in_field = point_in_field
-        self.filtered_theta = point_in_field.z  # NEW
+        self.filtered_theta = point_in_field.theta # NEW
 
         self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (

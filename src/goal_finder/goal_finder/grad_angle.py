@@ -97,7 +97,7 @@ class GradientAngle(Node):
     #     self.r_angle = msg.position[0]
 
     def timer_callback(self):
-        if self.r_angle and self.r_pos is not None:
+        if self.r_angle and self.r_pos is not None and self.obs_pos is not None:
             grad_angle = self.grad_angle()
     
     # ----- coordinate transformations -----

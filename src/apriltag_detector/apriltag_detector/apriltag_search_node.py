@@ -4,6 +4,7 @@ import rclpy
 from apriltag_msgs.msg import AprilTagDetectionArray
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from std_msgs.msg import Float32
 
 
 def to_rads(degrees):
@@ -14,24 +15,32 @@ class AprilTagSearchNode(Node):
     def __init__(self):
         super().__init__("apriltag_search_node")
         self.STEP_SIZE = to_rads(10)
-        self.ANGLE_LIMIT = to_rads(50)
+        self.ANGLE_LIMIT = to_rads(80)
         self.TOLERANCE = 10
 
         self.direction = 1
         self.empty_count = 0
-        self.current_angle = 0
+        self.current_angle = 0.0
 
         self.detections_subscriber = self.create_subscription(
             AprilTagDetectionArray, "/apriltag/detections", self.detections_callback, 10
         )
 
-        self.camera_tilt_publisher = self.create_publisher(
+        self.joint_states_publisher = self.create_publisher(
             JointState, "/ugv/joint_states", 10
         )
 
         self.reset_camera_tilt()
 
         self.get_logger().info("AprilTag Search Node Initialized.")
+
+        self.pan_publisher = self.create_publisher(Float32, "/camera_pan", 10)
+        self.timer = self.create_timer(0.5, self.publish_pan)
+
+    def publish_pan(self):
+        msg = Float32()
+        msg.data = self.current_angle
+        self.pan_publisher.publish(msg)
 
     def detections_callback(self, msg: AprilTagDetectionArray):
         if len(msg.detections) > 1:
@@ -60,7 +69,7 @@ class AprilTagSearchNode(Node):
 
         joint_msg.name = ["pt_base_link_to_pt_link1", "pt_link1_to_pt_link2"]
         joint_msg.position = [self.current_angle, 0.0]
-        self.camera_tilt_publisher.publish(joint_msg)
+        self.joint_states_publisher.publish(joint_msg)
 
     def reset_camera_tilt(self):
         self.get_logger().info("Resetting camera position to [0, 0].")
@@ -69,7 +78,7 @@ class AprilTagSearchNode(Node):
 
         joint_msg.name = ["pt_base_link_to_pt_link1", "pt_link1_to_pt_link2"]
         joint_msg.position = [0.0, 0.0]
-        self.camera_tilt_publisher.publish(joint_msg)
+        self.joint_states_publisher.publish(joint_msg)
 
 
 def main(args=None):

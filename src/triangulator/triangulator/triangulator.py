@@ -4,7 +4,8 @@ import cv2  # pip install opencv-python
 import numpy as np
 import rclpy
 from apriltag import apriltag  # pip install apriltag
-from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray, Point
+from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray
+from geometry_msgs.msg import Point
 from rclpy.node import Node
 # from sensor_msgs.msg import CompressedImage
 from sympy import geometry
@@ -20,8 +21,11 @@ class Triangulator(Node):
             AprilTagDetectionArray, "/apriltag/detections", self.listener_callback, 10
         )
         self.coordinates_publisher = self.create_publisher(
-            tuple , "/triangulated_pos", self.publisher_coords, 10              #TODO define coords
-        ) #(x: float, y: float)
+            Point, "/triangulated_pos", 10
+        )
+        self.last_coordinates_publisher = self.create_publisher(
+            Point, "/last_valid_triangulated_pos", 10
+        )
 
         self.qr_coords = { # 00 at arnouds desk, 7510 x 10520  at window at computers
                         #   assuming objects are in the middle of the lines
@@ -41,6 +45,7 @@ class Triangulator(Node):
         # 
         
         self.pos = None
+        self.last_valid_pos = (-1,-1)
         
     def two_point_triangl(self, qrids, distances) -> tuple:
         coords1 = self.qr_coords.get(qrids[0])
@@ -48,12 +53,18 @@ class Triangulator(Node):
         
         qr1 = geometry.Point2D(coords1[0], coords1[1])
         qr2 = geometry.Point2D(coords2[0], coords2[1])
+        # self.get_logger().info(f'triangulating between QR {qrids[0]} at {coords1} and QR {qrids[1]} at {coords2} with distances {distances[0]}, {distances[1]}')
+        # self.get_logger().info(f'Circles: Center1 {qr1}, Radius1 {distances[0]}; Center2 {qr2}, Radius2 {distances[1]}')
         
-        intersection = geometry.Circle(qr1, distances[0]).intersection(geometry.Circle(qr2, distance[1]))
-        print('found intersections:', intersection)
+        intersection = geometry.Circle(qr1, distances[0]).intersection(geometry.Circle(qr2, distances[1]))
+        # self.get_logger().info(f'found intersections: {intersection}')
         for i in intersection:
+            self.get_logger().info(f'checking intersection: {(i.x.evalf(), i.y.evalf())}')
+            # print('checking intersection:', i)
             if 0 <= i.x.evalf() <= self.width and 0 <= i.y.evalf() <= self.height:
+                # print('valid intersection:', i)
                 return (i.x.evalf(), i.y.evalf())
+            
             
     
     def add_position(self, position):
@@ -63,18 +74,26 @@ class Triangulator(Node):
     
     def extract_most_reliable(self, qr_ids, qr_distances, qr_mids):
         # choose the qr code closest to the center of the image
-        center_x = self.width / 2
-        center_y = self.height / 2
-        most_middle_idx = np.argmin(np.array(center_x - qr_mids[0])**2 + np.array(center_y - qr_mids[1])**2)
-        print(qr_mids)
-        print(most_middle_idx)
-        
+        center_x = 640 / 2
+        center_y = 480 / 2
+        print(np.array(center_x - qr_mids[0])**2 + np.array(center_y - qr_mids[1])**2)
+        min_dist_qr = None
+        most_middle_idx = -1
+        for idx, (x, y) in enumerate(zip(qr_mids[0], qr_mids[1])):
+            dist = (center_x - x)**2 + (center_y - y)**2
+            if min_dist_qr is None or dist < min_dist_qr:
+                min_dist_qr = dist
+                most_middle_idx = idx
+       
+       
+        self.get_logger().info(f'Selected anchor QR code ID {qr_ids[most_middle_idx]} at index {most_middle_idx} as most reliable.')
         anchor_qr_id = qr_ids[most_middle_idx]
         anchor_distance = qr_distances[most_middle_idx]
         
-        list_of_others = qr_ids.pop(most_middle_idx, inplace=False)
-        list_of_distances = qr_distances.pop(most_middle_idx, inplace=False)
-        
+        list_of_others = qr_ids[:most_middle_idx] + qr_ids[most_middle_idx+1:]
+        list_of_distances = qr_distances[:most_middle_idx] + qr_distances[most_middle_idx+1:]
+        self.get_logger().info(f'other QR codes: {list_of_others} with distances {list_of_distances}.')
+
         return anchor_qr_id, anchor_distance, list_of_others, list_of_distances
         
   
@@ -95,47 +114,50 @@ class Triangulator(Node):
         for qrid, ri in zip(other_ids, other_dists):
             xi, yi = self.qr_coords.get(qrid)
             A.append([2*(xi - x1), 2*(yi - y1)])
-            b.append(anchor_dist**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2)
+            b.append(anchor_dist**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2 )
+
 
         A = np.array(A)
         b = np.array(b)
-
         pos, *_ = np.linalg.lstsq(A, b, rcond=None)  # least-squares solution
-        return pos  # (x, y)
+        x = np.clip(pos[0], 0, self.width)
+        y = np.clip(pos[1], 0, self.height)
+        return (x,y)  # (x, y)
     
     
     
     def listener_callback(self, qrid_distance):
         n_tags = len(qrid_distance.detections)
         tag_ids = [det.id for det in qrid_distance.detections]
-        tag_distances = [det.goodness for det in qrid_distance.detections]  # placeholder for actual distance
+        tag_distances = [det.goodness*1000 for det in qrid_distance.detections]  # from m to mm
         tag_midpoints = ([det.centre.x for det in qrid_distance.detections], [det.centre.y for det in qrid_distance.detections])
         if n_tags < 2:
             self.get_logger().info("Not enough QR codes detected for triangulation.")
-            self.pos = None
-        if n_tags == 2:
+            self.pos = (-1.0, -1.0)
+        elif n_tags == 2:
             position = self.two_point_triangl(tag_ids, tag_distances)
-            if position:
+            if position is not None:
+                self.last_valid_pos = position
                 self.pos = position
-                self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]}")
+                self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]} from 2")
             else:
                 self.get_logger().info("No valid intersection point found within bounds.")
-                self.pos = None
+                self.pos = (-1.0, -1.0)
         else:
             position = self.multipoint_triangl(tag_ids, tag_distances, tag_midpoints)
-            if position:
+            if position is not None:
                 self.get_logger().info(f"Triangulated Position: x={position[0]}, y={position[1]}")
+                self.last_valid_pos = position
                 self.pos = position
             else:
                 self.get_logger().info("No valid intersection point found within bounds.")
-                self.pos = None
-                
-    def publisher_coords(self):
-        if self.pos:
-            msg = self.pos
-            self.coordinates_publisher.publish(msg)
-            self.get_logger().info(f"Published triangulated position: {self.pos}.")
-                
+                self.pos = (-1.0, -1.0)
+        point_msg = Point(x=float(self.pos[0]), y=float(self.pos[1]), z=0.0)
+        self.coordinates_publisher.publish(point_msg)
+        msg2 = Point(x=float(self.last_valid_pos[0]), y=float(self.last_valid_pos[1]), z=0.0)
+        self.last_coordinates_publisher.publish(msg2)
+        self.get_logger().info(f"Published triangulated position: {self.pos}.")
+
                 
 def main(args=None):
     rclpy.init(args=args)

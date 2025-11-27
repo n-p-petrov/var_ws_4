@@ -14,7 +14,11 @@ from apriltag_detector.apriltag_detector import ApriltagDetector
 from goal_finder.kalman import EkfNode
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+<<<<<<< HEAD
 from goal_finder.ugv_obstacle_detector import UGVObstacleDetector
+=======
+from rclpy.executors import MultiThreadedExecutor
+>>>>>>> main
 
 #to run together you’d typically use a MultiThreadedExecutor or similar in ROS2 CHECK LATER
 
@@ -74,6 +78,7 @@ def main(args=None):
     print("Initializing the drive publisher...")
     drive_publisher = DrivePublisher()
 
+<<<<<<< HEAD
     try:
         print("Initializing the apriltag detector...")
         apriltag_detector = ApriltagDetector()
@@ -83,6 +88,32 @@ def main(args=None):
 
         print("Starting the kalman filter loop...")
         kalman = EkfNode()
+=======
+    # print("Setting camera orientation...")
+    # set_camera_joint_once()
+    
+    executor = MultiThreadedExecutor()
+    managed_nodes = []
+
+    try:
+        print("Initializing the apriltag detector...")
+        apriltag_detector = ApriltagDetector()
+        managed_nodes.append(apriltag_detector)
+
+        print("Initializing the triangulator...")
+        triangulator = Triangulator()
+        managed_nodes.append(triangulator)
+
+        print("Starting the kalman filter loop...")
+        kalman = EkfNode()
+        managed_nodes.append(kalman)
+
+        for node in managed_nodes:
+            executor.add_node(node)
+
+        print("Spinning executor with detector, triangulator, and EKF nodes...")
+        executor.spin()
+>>>>>>> main
 
         print("Starting the obstacle detection...")
         ugv_obstacle_detector = UGVObstacleDetector()
@@ -109,7 +140,23 @@ def main(args=None):
             time.sleep(0.3)
 
     finally:
+<<<<<<< HEAD
         # clean up
+=======
+        for node in managed_nodes:
+            try:
+                executor.remove_node(node)
+            except Exception:
+                pass
+
+            try:
+                node.destroy_node()
+            except Exception:
+                pass
+
+        executor.shutdown()
+
+>>>>>>> main
         try:
             drive_publisher.destroy_node()
             apriltag_detector.destroy_node()

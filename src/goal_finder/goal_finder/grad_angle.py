@@ -148,7 +148,7 @@ class GradientAngle(Node):
     def grad_angle(self):
         if self.r_angle and self.r_pos is not None:
             gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
-            grad_angle = -np.atan2(gradient[1], gradient[0])
+            grad_angle = -np.arctan2(gradient[1], gradient[0])
 
             print("[GRADIENTS]")
             print(f"gradient :   {gradient}")

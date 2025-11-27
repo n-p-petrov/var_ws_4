@@ -77,11 +77,12 @@ class GradientAngle(Node):
     # ----- callbacks -----
 
     def obstacle_callback(self, msg:PointStamped):
-        u = msg.point.x
-        v = msg.point.y
-        z = msg.point.z
-        if z > 0:
-            self.obs_pos = self.obstacle_world_coords(u,v,z)
+        if self.r_angle and self.r_pos:
+            u = msg.point.x
+            v = msg.point.y
+            z = msg.point.z
+            if z > 0:
+                self.obs_pos = self.obstacle_world_coords(u,v,z)
 
     def pose_callback(self, msg:Pose2D):
         self.r_pos = np.array([msg.x, msg.y])
@@ -94,7 +95,8 @@ class GradientAngle(Node):
     #     self.r_angle = msg.position[0]
 
     def timer_callback(self):
-        grad_angle = self.grad_angle()
+        if self.r_angle and self.r_pos:
+            grad_angle = self.grad_angle()
     
     # ----- coordinate transformations -----
 

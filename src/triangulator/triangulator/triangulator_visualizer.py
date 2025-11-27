@@ -63,7 +63,7 @@ class TriangulatorVisualizer(Node):
                 2: (760, 8080),
                 3: (6750, 8080),
                 4: (760, 5250),
-                5: (6750, 4500),
+                5: (6750, 5250),
                 6: (620, 3380),
                 7: (7510 - 110, 3380),
                 8: (890, 760),
@@ -83,6 +83,7 @@ class TriangulatorVisualizer(Node):
         self.undetected_apriltag_color = (0, 0, 255)  # red
         self.apriltag_border_color = (0, 0, 0)  # black
         self.apriltag_square_size = 10
+        self.apriltag_distance_color = (255, 255, 255)
 
         # draw red squares on field image
         for _, (px, py) in self.apriltag_coordinates.items():
@@ -115,18 +116,23 @@ class TriangulatorVisualizer(Node):
         """
         Draws a squares on the field image at each detected tag's coordinates.
         """
-        for  detection in msg.detections:
+        for detection in msg.detections:
             (px, py) = self.apriltag_coordinates[detection.id]
             px = int(px)
             py = int(py)
 
+            # tag
             x1 = px - self.apriltag_square_size
             y1 = py - self.apriltag_square_size
             x2 = px + self.apriltag_square_size
             y2 = py + self.apriltag_square_size
 
             cv2.rectangle(
-                self.field_to_display, (x1, y1), (x2, y2), self.detected_apriltag_color, thickness=-1
+                self.field_to_display,
+                (x1, y1),
+                (x2, y2),
+                self.detected_apriltag_color,
+                thickness=-1,
             )
             cv2.rectangle(
                 self.field_to_display,
@@ -134,6 +140,18 @@ class TriangulatorVisualizer(Node):
                 (x2, y2),
                 self.apriltag_border_color,
                 thickness=2,
+            )
+
+            # distance
+            distance_in_mm = detection.goodness * 1000
+            distance_in_pixels = int(distance_in_mm / self.field_max_x * self.field_width_px)
+            cv2.circle(
+                self.field_to_display,
+                center=(px, py),
+                radius=distance_in_pixels,
+                color=self.apriltag_distance_color,
+                thickness=2,
+                lineType=cv2.LINE_8
             )
 
     # --- Position visualization functions ---

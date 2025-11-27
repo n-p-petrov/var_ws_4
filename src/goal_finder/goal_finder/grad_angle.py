@@ -10,8 +10,9 @@ class GradientAngle(Node):
 
     # ----- constants -----
 
-        self.position_topic = "/triangulated_pos"
-        self.orient_topic = "/orientation"
+        # self.position_topic = "/triangulated_pos"
+        # self.orient_topic = "/orientation"
+        self.pose_topic = "/filtered_pose"
         self.obstacle_topic = "/obstacle_detected"
 
         '''
@@ -51,18 +52,21 @@ class GradientAngle(Node):
         ])
 
     # ----- subscribers/publishers
-
+        self.pose_sub = self.create_subscription(
+            Pose2D, self.pose_topic, self.pose_callback, 10
+        )
         self.obstacle_sub = self.create_subscription(
             PointStamped, self.obstacle_topic, self.obstacle_callback, 10
         )
-        self.position_sub = self.create_subscription(
-            Pose2D, self.position_topic, self.position_callback, 10
-        )
-        self.orient_sub = self.create_subscription(
-            Float32, self.orient_topic, self.orient_callback, 10
-        )
         self.timer = self.create_timer(0.1, self.timer_callback)
 
+
+        # self.position_sub = self.create_subscription(
+        #     Pose2D, self.position_topic, self.position_callback, 10
+        # )
+        # self.orient_sub = self.create_subscription(
+        #     Float32, self.orient_topic, self.orient_callback, 10
+        # )
         # angle publisher
 
     # ----- callbacks -----
@@ -73,12 +77,16 @@ class GradientAngle(Node):
         z = msg.point.z
         if z > 0:
             self.obs_pos = self.obstacle_world_coords(u,v,z)
-            
-    def position_callback(self, msg:Pose2D):
-        self.r_pos = np.array([msg.x, msg.y])
 
-    def orient_callback(self, msg:Float32):
-        self.r_angle = msg.position[0]
+    def pose_callback(self, msg:Pose2D):
+        self.r_pos = np.array([msg.x, msg.y])
+        self.r_angle = msg.theta
+
+    # def position_callback(self, msg:Pose2D):
+    #     self.r_pos = np.array([msg.x, msg.y])
+
+    # def orient_callback(self, msg:Float32):
+    #     self.r_angle = msg.position[0]
 
     def timer_callback(self):
         grad_angle = self.grad_angle()

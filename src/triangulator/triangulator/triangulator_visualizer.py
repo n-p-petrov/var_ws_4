@@ -53,7 +53,7 @@ class TriangulatorVisualizer(Node):
         self.apriltag_detections_subscriber = self.create_subscription(
             AprilTagDetectionArray,
             "/apriltag/detections",
-            self.draw_apriltags_on_field,
+            self.draw_apriltags,
             10,
         )
 
@@ -82,25 +82,12 @@ class TriangulatorVisualizer(Node):
         self.detected_apriltag_color = (0, 255, 0)  # green
         self.undetected_apriltag_color = (0, 0, 255)  # red
         self.apriltag_border_color = (0, 0, 0)  # black
-        self.apriltag_square_size = 20
+        self.apriltag_square_size = 10
 
-        self.apriltag_detections = None
-
-    def draw_apriltags_on_field(self, msg: AprilTagDetectionArray):
-        """
-        Draws solid squares on the field image at each AprilTag's coordinates.
-        """
-
-        for tag_id, (px, py) in self.apriltag_coordinates.items():
+        # draw red squares on field image
+        for _, (px, py) in self.apriltag_coordinates.items():
             px = int(px)
             py = int(py)
-
-            if self.apriltag_detections and any(
-                d.id[0] == tag_id for d in msg.detections
-            ):
-                color = self.detected_apriltag_color
-            else:
-                color = self.undetected_apriltag_color
 
             x1 = px - self.apriltag_square_size
             y1 = py - self.apriltag_square_size
@@ -108,7 +95,36 @@ class TriangulatorVisualizer(Node):
             y2 = py + self.apriltag_square_size
 
             cv2.rectangle(
-                self.field_to_display, (x1, y1), (x2, y2), color, thickness=-1
+                self.field_image,
+                (x1, y1),
+                (x2, y2),
+                self.undetected_apriltag_color,
+                thickness=-1,
+            )
+            cv2.rectangle(
+                self.field_image,
+                (x1, y1),
+                (x2, y2),
+                self.apriltag_border_color,
+                thickness=2,
+            )
+
+        self.apriltag_detections = None
+
+    def draw_apriltags(self, msg: AprilTagDetectionArray):
+        """
+        Draws a squares on the field image at each detected tag's coordinates.
+        """
+        for  detection in msg.detections:
+            (px, py) = self.apriltag_coordinates[detection.id]
+
+            x1 = px - self.apriltag_square_size
+            y1 = py - self.apriltag_square_size
+            x2 = px + self.apriltag_square_size
+            y2 = py + self.apriltag_square_size
+
+            cv2.rectangle(
+                self.field_to_display, (x1, y1), (x2, y2), self.detected_apriltag_color, thickness=-1
             )
             cv2.rectangle(
                 self.field_to_display,

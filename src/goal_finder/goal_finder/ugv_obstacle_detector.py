@@ -5,26 +5,24 @@ Detect other UGV rovers using OAK-D RGB + depth.
 Method: color (dark blobs) + depth (distance threshold)
 """
 
-import numpy as np
 import cv2
+import numpy as np
 import rclpy
-from rclpy.node import Node
-
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
-
 #for publishing obstacle info
 from geometry_msgs.msg import PointStamped
+from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
+from sensor_msgs.msg import Image
+
 
 class UGVObstacleDetector(Node):
     def __init__(self):
         super().__init__("ugv_obstacle_detector")
 
         # Parameters
-        # self.rgb_topic = "/oak/rgb/image_raw"
-        self.rgb_topic = "/color/image"  # it might be lower resolution 
-        self.depth_topic = "/stereo/depth"
+        self.rgb_topic = "/oak/rgb/image_raw"
+        self.depth_topic = "/oak/stereo/image_raw"
         self.max_obstacle_distance_m = 1.5  # threshold for obstacle distance (idk, I put 1.5 m, we can change later)
         self.min_blob_area_px = 800        # ignore tiny noise blobs < 800 px
         self.show_debug_window = False      # set False if no GUI available

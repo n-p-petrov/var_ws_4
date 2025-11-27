@@ -9,6 +9,7 @@ from geometry_msgs.msg import Point
 from rclpy.node import Node
 # from sensor_msgs.msg import CompressedImage
 from sympy import geometry
+from itertools import combinations
 
 
 class Triangulator(Node):
@@ -98,31 +99,49 @@ class Triangulator(Node):
         
   
         
+    # def multipoint_triangl(self, qrids, distances, midpoints):
+    #     # try using as a reference the most midle qr TODO
+    #     # https://www.mi.fu-berlin.de/inf/groups/ag-tech/projects/ls2/ipin.pdf
+    #     # solve by lstsq by susbstracting the circles
+    #     qrids = np.array(qrids, float)
+    #     distances  = np.array(distances,  float)
+    #     qr_mids = np.array(midpoints, float)
+        
+    #     anchor_id, anchor_dist, other_ids, other_dists = self.extract_most_reliable(qrids.tolist(), distances.tolist(), qr_mids)    
+    #     x1, y1 = self.qr_coords.get(anchor_id)
+    #     A = []
+    #     b = []
+
+    #     for qrid, ri in zip(other_ids, other_dists):
+    #         xi, yi = self.qr_coords.get(qrid)
+    #         A.append([2*(xi - x1), 2*(yi - y1)])
+    #         b.append(anchor_dist**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2 )
+
+
+    #     A = np.array(A)
+    #     b = np.array(b)
+    #     pos, *_ = np.linalg.lstsq(A, b, rcond=None)  # least-squares solution
+    #     # x = np.clip(pos[0], 0, self.width)
+    #     # y = np.clip(pos[1], 0, self.height)   
+    #     return (x,y)  # (x, y)
+    
     def multipoint_triangl(self, qrids, distances, midpoints):
-        # try using as a reference the most midle qr TODO
-        # https://www.mi.fu-berlin.de/inf/groups/ag-tech/projects/ls2/ipin.pdf
-        # solve by lstsq by susbstracting the circles
+        # all combinations of midpoiints
         qrids = np.array(qrids, float)
         distances  = np.array(distances,  float)
-        qr_mids = np.array(midpoints, float)
+        qr_mids = np.array(midpoints, float)    
         
-        anchor_id, anchor_dist, other_ids, other_dists = self.extract_most_reliable(qrids.tolist(), distances.tolist(), qr_mids)    
-        x1, y1 = self.qr_coords.get(anchor_id)
-        A = []
-        b = []
-
-        for qrid, ri in zip(other_ids, other_dists):
-            xi, yi = self.qr_coords.get(qrid)
-            A.append([2*(xi - x1), 2*(yi - y1)])
-            b.append(anchor_dist**2 - ri**2 + xi**2 - x1**2 + yi**2 - y1**2 )
-
-
-        A = np.array(A)
-        b = np.array(b)
-        pos, *_ = np.linalg.lstsq(A, b, rcond=None)  # least-squares solution
-        x = np.clip(pos[0], 0, self.width)
-        y = np.clip(pos[1], 0, self.height)
-        return (x,y)  # (x, y)
+        possible_positions = []
+        for (i1, id1), (i2, id2) in combinations(enumerate(qrids), 2):
+            pos = self.two_point_triangl([id1, id2], [distances[i1], distances[i2]])
+            if pos is not None:
+                possible_positions.append(pos)
+        
+        if len(possible_positions) == 0:
+            return None
+        avg_x = sum([p[0] for p in possible_positions]) / len(possible_positions)
+        avg_y = sum([p[1] for p in possible_positions]) / len(possible_positions)
+        return (avg_x, avg_y)
     
     
     

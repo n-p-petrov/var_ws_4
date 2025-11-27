@@ -16,7 +16,7 @@ class AprilTagSearchNode(Node):
         super().__init__("apriltag_search_node")
         self.STEP_SIZE = to_rads(10)
         self.ANGLE_LIMIT = to_rads(80)
-        self.TOLERANCE = 10
+        self.TOLERANCE = 7
 
         self.direction = 1
         self.empty_count = 0

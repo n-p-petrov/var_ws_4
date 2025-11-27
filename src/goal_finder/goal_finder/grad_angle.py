@@ -133,7 +133,7 @@ class GradientAngle(Node):
             grad = np.array([0.0, 0.0])
         return grad
     
-    def grad_angle(self, gradient):
+    def grad_angle(self):
         gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
         grad_angle = -np.atan2(gradient[1], gradient[0])
 

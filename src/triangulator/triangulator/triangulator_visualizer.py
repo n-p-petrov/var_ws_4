@@ -73,8 +73,8 @@ class TriangulatorVisualizer(Node):
         )
         self.apriltag_coordinates = {
             k: (
-                x / self.field_max_x * self.field_width_px,
-                y / self.field_max_y * self.field_height_px,
+                self.pad + x / self.field_max_x * self.field_width_px,
+                self.pad + y / self.field_max_y * self.field_height_px,
             )
             for k, (x, y) in self.apriltag_coordinates.items()
         }

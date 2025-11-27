@@ -77,6 +77,7 @@ class GradientAngle(Node):
     # ----- callbacks -----
 
     def obstacle_callback(self, msg:PointStamped):
+        print("obstacle_callback", msg)
         if self.r_angle and self.r_pos is not None:
             u = msg.point.x
             v = msg.point.y
@@ -85,6 +86,7 @@ class GradientAngle(Node):
                 self.obs_pos = self.obstacle_world_coords(u,v,z)
 
     def pose_callback(self, msg:Pose2D):
+        print("pose_callback", msg)
         self.r_pos = np.array([msg.x, msg.y])
         self.r_angle = msg.theta
 
@@ -101,55 +103,59 @@ class GradientAngle(Node):
     # ----- coordinate transformations -----
 
     def obstacle_world_coords(self, u,v,z):
-        z *= 1000 # to mm
-        ray_cam_obst = np.linalg.inv(self.K) @ np.array([u,v,1]).T
-        unit_ray = ray_cam_obst / np.linalg.norm(ray_cam_obst)
-        theta = np.arccos(unit_ray[-1]) # angle optical and ray
-        ray_y0 = ray_cam_obst.copy()
-        ray_y0[1] = 0.0
-        cross = np.cross(np.array([0,0,1]), ray_y0)
-        theta = -theta if cross[1] < 0 else theta  # obstacle left or right of optical
-        rho = np.linalg.norm(z * ray_y0)
+        if self.r_angle and self.r_pos is not None:
+            z *= 1000 # to mm
+            ray_cam_obst = np.linalg.inv(self.K) @ np.array([u,v,1]).T
+            unit_ray = ray_cam_obst / np.linalg.norm(ray_cam_obst)
+            theta = np.arccos(unit_ray[-1]) # angle optical and ray
+            ray_y0 = ray_cam_obst.copy()
+            ray_y0[1] = 0.0
+            cross = np.cross(np.array([0,0,1]), ray_y0)
+            theta = -theta if cross[1] < 0 else theta  # obstacle left or right of optical
+            rho = np.linalg.norm(z * ray_y0)
 
-        angle = theta + self.r_angle
-        ca = np.cos(angle)
-        sa = np.sin(angle)
+            angle = theta + self.r_angle
+            ca = np.cos(angle)
+            sa = np.sin(angle)
 
-        v = np.array([1,0])
-        R = np.array([[ca, sa],[-sa, ca]]) # clockwise
-        obs_relto_robot = rho * (R@v)
-        obs_world = np.array(self.r_pos) - obs_relto_robot
+            v = np.array([1,0])
+            R = np.array([[ca, sa],[-sa, ca]]) # clockwise
+            obs_relto_robot = rho * (R@v)
+            obs_world = np.array(self.r_pos) - obs_relto_robot
 
-        print("[OBSTACLES]")
-        print(f"obstacle relto robot:   {obs_relto_robot}")
-        print(f"obs in world coord  :   {obs_world}")
+            print("[OBSTACLES]")
+            print(f"obstacle relto robot:   {obs_relto_robot}")
+            print(f"obs in world coord  :   {obs_world}")
 
-        return obs_world
+            return obs_world
     
     # ----- gradients -----
 
     def U_att_grad(self, t="A", alpha=1.0):
-        grad = alpha * (self.r_pos - self.targets[t])
-        return grad
+        if self.r_angle and self.r_pos is not None:
+            grad = alpha * (self.r_pos - self.targets[t])
+            return grad
     
     def U_rep_grad(self, radius=250, beta=1.0):
-        d = np.linalg.norm(self.r_pos - self.obs_pos)
-        if d <= self.rho:
-            grad = -beta * ((1 / d) - (1 / radius)) * ((self.r_pos - self.obs_pos)/d**3)
-        else:
-            grad = np.array([0.0, 0.0])
-        return grad
+        if self.r_angle and self.r_pos is not None:
+            d = np.linalg.norm(self.r_pos - self.obs_pos)
+            if d <= self.rho:
+                grad = -beta * ((1 / d) - (1 / radius)) * ((self.r_pos - self.obs_pos)/d**3)
+            else:
+                grad = np.array([0.0, 0.0])
+            return grad
     
     def grad_angle(self):
-        gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
-        grad_angle = -np.atan2(gradient[1], gradient[0])
+        if self.r_angle and self.r_pos is not None:
+            gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
+            grad_angle = -np.atan2(gradient[1], gradient[0])
 
-        print("[GRADIENTS]")
-        print(f"gradient :   {gradient}")
-        print(f"angle    :   {grad_angle:.3f}")
-        print(f"magnitude:   {np.linalg.norm(gradient)}")
+            print("[GRADIENTS]")
+            print(f"gradient :   {gradient}")
+            print(f"angle    :   {grad_angle:.3f}")
+            print(f"magnitude:   {np.linalg.norm(gradient)}")
 
-        return grad_angle
+            return grad_angle
 
 
 def main(args=None):

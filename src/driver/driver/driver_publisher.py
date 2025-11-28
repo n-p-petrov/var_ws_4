@@ -19,8 +19,6 @@ class DrivePublisher(Node):
 
         Args:
             angle (float): Angle to turn by in radians.
-                If angle < 0, turns left.
-                If angle > 0, turns right.
             angular_speed (float): radians per second
         """
         msg = Twist()

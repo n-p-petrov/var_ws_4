@@ -11,7 +11,7 @@ class MoverNode(Node):
         super().__init__("mover_node")
         self.LINEAR_VELOCITY = 0.2  # something per second
         self.DURATION_LINEAR_MOVE = 0.5  # seconds
-        self.ANGULAR_VELOCITY = pi / 4  # radians per second
+        self.ANGULAR_VELOCITY = pi / 8  # radians per second
         self.STOPPING_MAGNITUDE = 500
         self.busy = False
 

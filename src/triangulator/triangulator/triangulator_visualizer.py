@@ -326,15 +326,15 @@ class TriangulatorVisualizer(Node):
 
         self.obstacle_timer = self.create_timer(1 / 20, self.draw_obstacle)
 
-        self.gradient_color = (255, 0, 255)
+        self.gradient_color = (255, 255, 255)
 
     def gradient_callback(self, msg: Point):
         if self.filtered_point_in_image:
             self.gradient_point = (
-                msg.x / self.field_max_x * self.field_width_px
-                + self.filtered_point_in_image[0],
-                msg.y / self.field_max_y * self.field_height_px
-                + self.filtered_point_in_image[1],
+                int(msg.x / self.field_max_x * self.field_width_px
+                + self.filtered_point_in_image[0]),
+                int(msg.y / self.field_max_y * self.field_height_px
+                + self.filtered_point_in_image[1]),
             )
 
             cv2.arrowedLine(
@@ -348,8 +348,8 @@ class TriangulatorVisualizer(Node):
 
     def obstacle_callback(self, msg: Point):
         self.obstacle_pos = (
-            self.pad + msg.x / self.field_max_x * self.field_width_px,
-            self.pad + msg.y / self.field_max_y * self.field_height_px,
+           int(self.pad + msg.x / self.field_max_x * self.field_width_px),
+           int(self.pad + msg.y / self.field_max_y * self.field_height_px),
         )
 
     def draw_obstacle(self):

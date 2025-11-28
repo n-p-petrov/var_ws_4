@@ -131,7 +131,7 @@ class GradientAngle(Node):
     def obstacle_world_coords(self, u,v,z):
         if self.r_angle and self.r_pos is not None:
             z *= 1000 # to mm
-            obs_cam = z * (np.linalg.inv(K) @ np.array([u,v,1]).T)
+            obs_cam = z * (np.linalg.inv(self.K) @ np.array([u,v,1]).T)
             fwd_offset = obs_cam[2] * self.v_heading
             side_offset = obs_cam[0] * self.v_perp
             obs_relto_robot = fwd_offset + side_offset

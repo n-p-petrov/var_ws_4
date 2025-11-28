@@ -10,6 +10,7 @@ from triangulator.triangulator import Triangulator
 
 from goal_finder.grad_angle import GradientAngle
 from goal_finder.kalman import EkfNode
+from goal_finder.mover_node import MoverNode
 from goal_finder.ugv_obstacle_detector import UGVObstacleDetector
 
 
@@ -38,10 +39,13 @@ def main(ros_args=None):
         print("Starting the obstacle detection...")
         ugv_obstacle_detector = UGVObstacleDetector()
 
-        print("Starting the gradient node")
+        print("Starting the gradient node...")
         gradient_node = GradientAngle(target=args.target)
+
+        print("Starting the mover node...")
+        mover_node = MoverNode(drive_publisher)
         # ---- run all nodes together ----
-        executor = rclpy.executors.MultiThreadedExecutor(num_threads=5)
+        executor = rclpy.executors.MultiThreadedExecutor(num_threads=7)
 
         # executor.add_node(drive_publisher)
         executor.add_node(apriltag_detector)
@@ -50,6 +54,7 @@ def main(ros_args=None):
         executor.add_node(kalman)
         executor.add_node(ugv_obstacle_detector)
         executor.add_node(gradient_node)
+        executor.add_node(mover_node)
 
         print("Spinning all nodes...")
         executor.spin()

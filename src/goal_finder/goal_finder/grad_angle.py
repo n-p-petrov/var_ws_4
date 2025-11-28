@@ -76,7 +76,7 @@ class GradientAngle(Node):
         # obstacle location
 
         self.gradient_pub = self.create_publisher(
-            Point, "/grad/gradient", 10
+            Pose2D, "/grad/gradient", 10
         )
         self.obstacle_pub = self.create_publisher(
             Point, "grad/obstacle", 10
@@ -101,9 +101,10 @@ class GradientAngle(Node):
 
     def publish_state(self):
         if self.gradient is not None:
-            grad_msg = Point()
+            grad_msg = Pose2D()
             grad_msg.x = self.gradient[0]
             grad_msg.y = self.gradient[1]
+            grad_msg.theta = self.grad_angle
             self.gradient_pub.publish(grad_msg)
 
         if self.obs_pos is not None:

@@ -311,7 +311,7 @@ class TriangulatorVisualizer(Node):
         self.goal_pos = None
 
         self.gradient_subscriber = self.create_subscription(
-            Point,
+            Pose2D,
             "/grad/gradient",
             self.gradient_callback,
             10,
@@ -328,7 +328,7 @@ class TriangulatorVisualizer(Node):
 
         self.gradient_color = (255, 255, 255)
 
-    def gradient_callback(self, msg: Point):
+    def gradient_callback(self, msg: Pose2D):
         if self.filtered_point_in_image:
             self.gradient_point = (
                 int(msg.x / self.field_max_x * self.field_width_px

@@ -127,8 +127,8 @@ class ApriltagDetector(Node):
         # publish ROS detections + compute PnP pose
         self.publish_apriltags(detected_tags)
 
-        self.get_logger().info(f"Detected {len(detected_tags)} tags in this frame.")
-        self.get_logger().info(f"Detected {self.total_num_tags} apriltags in total.")
+        # self.get_logger().info(f"Detected {len(detected_tags)} tags in this frame.")
+        # self.get_logger().info(f"Detected {self.total_num_tags} apriltags in total.")
 
     # Build AprilTagDetectionArray and run solvePnP per tag
     def publish_apriltags(self, detected_tags):
@@ -148,9 +148,9 @@ class ApriltagDetector(Node):
             # centre & corners: scale back from upscaled coords
             cx_scaled = float(tag["center"][0] / self.scaling_factor)
             cy_scaled = float(tag["center"][1] / self.scaling_factor)
-            self.get_logger().info(
-                f"Center of tag {det.id}: ({cx_scaled}, {cy_scaled})"
-            )
+            # self.get_logger().info(
+            #     f"Center of tag {det.id}: ({cx_scaled}, {cy_scaled})"
+            # )
             det.centre = Point(x=cx_scaled, y=cy_scaled)
 
             corners_arr = np.array(tag["lb-rb-rt-lt"]).reshape(4, 2)
@@ -204,11 +204,11 @@ class ApriltagDetector(Node):
                 # distance calculation
                 tvec = tvec.reshape(3)
                 distance = float(np.sqrt(tvec[0] ** 2 + tvec[2] ** 2))
-                self.get_logger().info(
-                    f"Tag {id}: "
-                    f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
-                    f"distance ≈ {distance:.3f} m"
-                )
+                # self.get_logger().info(
+                #     f"Tag {id}: "
+                #     f"t = ({tvec[0]:.3f}, {tvec[1]:.3f}, {tvec[2]:.3f}) m, "
+                #     f"distance ≈ {distance:.3f} m"
+                # )
             else:
                 self.get_logger().warn(f"PnP pose estimation failed for tag {id}")
         except cv2.error as e:
@@ -244,9 +244,9 @@ class ApriltagDetector(Node):
         # when the angle is positive the viewing axis is to the right of the apriltag
         # when the angle is negative the viewing axis is to the left of the apriltag
 
-        self.get_logger().info(
-            f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
-        )
+        # self.get_logger().info(
+        #     f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
+        # )
         robot_orientation = angle_to_optic_axis + self.tag_orientation[tag_id]
 
         if self.camera_pan_angle:
@@ -265,9 +265,9 @@ class ApriltagDetector(Node):
         #
         robot_orientation_msg = Float32()
         robot_orientation_msg.data = float(robot_orientation)
-        self.get_logger().info(
-            f"Publishing robot orientation: {robot_orientation_msg.data} radians"
-        )
+        # self.get_logger().info(
+        #     f"Publishing robot orientation: {robot_orientation_msg.data} radians"
+        # )
         self.robot_orientation_publisher.publish(robot_orientation_msg)
 
         return robot_orientation

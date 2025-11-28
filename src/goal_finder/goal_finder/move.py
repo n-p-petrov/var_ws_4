@@ -1,82 +1,33 @@
-import math
+import argparse
 import time
-from functools import partial
 
-import cv2
-import numpy as np
 import rclpy
+from apriltag_detector.apriltag_detector import ApriltagDetector
+from apriltag_detector.apriltag_search_node import AprilTagSearchNode
 from driver.driver_publisher import DrivePublisher
 from geometry_msgs.msg import Twist
-
-from image_subscriber.image_subscriber import ImageSubscriber
 from triangulator.triangulator import Triangulator
-from apriltag_detector.apriltag_detector import ApriltagDetector
+
+from goal_finder.grad_angle import GradientAngle
 from goal_finder.kalman import EkfNode
-from rclpy.node import Node
-from sensor_msgs.msg import JointState
 from goal_finder.ugv_obstacle_detector import UGVObstacleDetector
 
-#to run together you’d typically use a MultiThreadedExecutor or similar in ROS2 CHECK LATER
 
-LINEAR_VELOCITY = 0.2
-DURATION_LINEAR_MOVE = 0.5  # seconds
+def main(ros_args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", type=str, default="C")
+    args, _ = parser.parse_known_args()
 
-ANGULAR_VELOCITY = math.pi / 4  # radians per second
-
-# def main(args=None):
-#     rclpy.init(args=args)
-#     print("Initializing the drive publisher...")
-#     drive_publisher = DrivePublisher()
-
-#     # print("Setting camera orientation...")
-#     # set_camera_joint_once()
-    
-#     try:
-#         print("Initializing the apriltag detector...")
-#         apriltag_detector = ApriltagDetector()
-#         rclpy.spin(apriltag_detector)
-        
-#         print("Initializing the triangulator...")
-#         triangulator = Triangulator()
-#         rclpy.spin(triangulator)
-        
-#         print("Starting the kalman filter loop...")
-#         kalman = EkfNode()
-#         rclpy.spin(kalman)
-
-#         # some moving here 
-
-#         print("Starting the obstacle detection...")
-#         ugv_obstacle_detector = UGVObstacleDetector()
-#         rclpy.spin(ugv_obstacle_detector)
-
-#     except KeyboardInterrupt:
-#         print("Shutting down...")
-
-#         if rclpy.ok():
-#             stop_msg = Twist()
-#             for i in range(5):
-#                 drive_publisher.publisher.publish(stop_msg)
-
-#             time.sleep(0.3)
-
-#     finally:
-#         try:
-#             drive_publisher.destroy_node()
-#         except Exception:
-#             pass
-
-#         if rclpy.ok():
-#             rclpy.shutdown()
-
-def main(args=None):
-    rclpy.init(args=args)
+    rclpy.init(args=ros_args)
     print("Initializing the drive publisher...")
     drive_publisher = DrivePublisher()
 
     try:
         print("Initializing the apriltag detector...")
         apriltag_detector = ApriltagDetector()
+
+        print("Initializing the apriltag search node...")
+        apriltag_search_node = AprilTagSearchNode()
 
         print("Initializing the triangulator...")
         triangulator = Triangulator()
@@ -87,14 +38,18 @@ def main(args=None):
         print("Starting the obstacle detection...")
         ugv_obstacle_detector = UGVObstacleDetector()
 
+        print("Starting the gradient node")
+        gradient_node = GradientAngle(target=args.target)
         # ---- run all nodes together ----
-        executor = rclpy.executors.MultiThreadedExecutor()
+        executor = rclpy.executors.MultiThreadedExecutor(num_threads=10)
 
-        executor.add_node(drive_publisher)
+        # executor.add_node(drive_publisher)
         executor.add_node(apriltag_detector)
+        executor.add_node(apriltag_search_node)
         executor.add_node(triangulator)
         executor.add_node(kalman)
         executor.add_node(ugv_obstacle_detector)
+        executor.add_node(gradient_node)
 
         print("Spinning all nodes...")
         executor.spin()
@@ -116,6 +71,8 @@ def main(args=None):
             triangulator.destroy_node()
             kalman.destroy_node()
             ugv_obstacle_detector.destroy_node()
+            apriltag_search_node.destroy_node()
+            gradient_node.destroy_node()
         except Exception:
             pass
 

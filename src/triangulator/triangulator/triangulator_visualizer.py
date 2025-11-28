@@ -175,7 +175,7 @@ class TriangulatorVisualizer(Node):
         self.filtered_pos_color = (255, 0, 0)  # BGR
 
     def pos_callback(self, point_in_field):
-        self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
+        # self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
             int(
                 self.pad
@@ -200,7 +200,7 @@ class TriangulatorVisualizer(Node):
             ),
         )
 
-        self.get_logger().info(f"pos in image: {point_in_image}")
+        # self.get_logger().info(f"pos in image: {point_in_image}")
         cv2.circle(
             self.field_to_display,
             point_in_image,
@@ -260,9 +260,9 @@ class TriangulatorVisualizer(Node):
         # Convert from field frame (standard math: up is +y) to image (down is +y)
         x1 = int(x0 + arrow_length * math.cos(theta))
         y1 = int(y0 + arrow_length * math.sin(theta))
-        self.get_logger().info(
-            f"Drawing arrow from ({x0}, {y0}) to ({x1}, {y1}) with theta={theta} rad"
-        )
+        # self.get_logger().info(
+        #     f"Drawing arrow from ({x0}, {y0}) to ({x1}, {y1}) with theta={theta} rad"
+        # )
 
         cv2.arrowedLine(
             img,
@@ -277,7 +277,7 @@ class TriangulatorVisualizer(Node):
         self.filtered_point_in_field = point_in_field
         self.filtered_theta = point_in_field.theta # NEW
 
-        self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
+        # self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
             int(
                 self.pad
@@ -300,7 +300,7 @@ class TriangulatorVisualizer(Node):
                 )
             ),
         )
-        self.get_logger().info(f"filtered pos in image: {point_in_image}")
+        # self.get_logger().info(f"filtered pos in image: {point_in_image}")
 
         self.filtered_point_in_image = point_in_image
 

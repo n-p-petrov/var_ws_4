@@ -17,11 +17,6 @@ class MoverNode(Node):
 
         self.drive_publisher = drive_publisher
 
-        self.pose_subscriber = self.create_subscription(
-            Pose2D, "/filtered_pose", self.pose_callback, 10
-        )
-        self.latest_robot_pose = None
-
         self.gradient_subscriber = self.create_subscription(
             Pose2D,
             "/grad/gradient",
@@ -30,13 +25,9 @@ class MoverNode(Node):
         )
         self.latest_gradient_pose = None
 
-        self.drive_timer = self.create_timer(0.5, self.move_along_gradient)
-
-    def pose_callback(self, msg: Pose2D):
-        self.latest_robot_pose = msg
-
     def gradient_callback(self, msg: Pose2D):
         self.latest_gradient_pose = msg
+        self.move_along_gradient()
 
     def wrap_angle(self, a: float) -> float:
         return (a + pi) % (2.0 * pi) - pi
@@ -44,7 +35,8 @@ class MoverNode(Node):
     def move_along_gradient(self):
         if self.busy:
             return
-        if not (self.latest_gradient_pose and self.latest_robot_pose):
+
+        if not self.latest_gradient_pose:
             return
 
         self.busy = True
@@ -53,9 +45,7 @@ class MoverNode(Node):
                 [self.latest_gradient_pose.x, self.latest_gradient_pose.y]
             )
             if grad_magnitude > self.STOPPING_MAGNITUDE:
-                turn_angle = self.wrap_angle(
-                    self.latest_gradient_pose.theta - self.latest_robot_pose.theta
-                )
+                turn_angle = self.latest_gradient_pose.theta
                 if abs(turn_angle) > 0.05:
                     self.get_logger().info(
                         f"Turning by {int(turn_angle / pi * 180)} degrees."

@@ -50,7 +50,7 @@ class MoverNode(Node):
                     self.get_logger().info(
                         f"Turning by {int(turn_angle / pi * 180)} degrees."
                     )
-                    self.drive_publisher.turn(-turn_angle, self.ANGULAR_VELOCITY)
+                    self.drive_publisher.turn(turn_angle, self.ANGULAR_VELOCITY)
 
                 self.drive_publisher.move_forward(
                     self.DURATION_LINEAR_MOVE, self.LINEAR_VELOCITY

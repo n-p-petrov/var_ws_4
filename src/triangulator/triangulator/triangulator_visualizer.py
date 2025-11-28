@@ -38,7 +38,7 @@ class TriangulatorVisualizer(Node):
         self.init_goal_finder_fields()
 
         self.field_to_display = self.field_image.copy()
-        self.display_timer = self.create_timer(1 / 15, self.display_callback)
+        self.display_timer = self.create_timer(1 / 10, self.display_callback)
 
     def display_callback(self):
         """
@@ -323,6 +323,8 @@ class TriangulatorVisualizer(Node):
             10,
         )
 
+        self.obstacle_timer = self.create_timer(1/10, self.draw_obstacle)
+
         self.gradient_color = (255, 0, 255)
 
     def gradient_callback(self, msg: Point):
@@ -334,22 +336,22 @@ class TriangulatorVisualizer(Node):
                 + self.filtered_point_in_image[1],
             )
 
+            cv2.arrowedLine(
+                self.field_to_display,
+                self.filtered_point_in_image,
+                self.gradient_point,
+                self.gradient_color,
+                thickness=2,
+                tipLength=0.3,
+            )
+
     def obstacle_callback(self, msg: Point):
         self.obstacle_pos = (
             self.pad + msg.x / self.field_max_x * self.field_width_px,
             self.pad + msg.y / self.field_max_y * self.field_height_px
         )
 
-    def draw_gradient(self):
-        cv2.arrowedLine(
-            self.field_to_display,
-            self.filtered_point_in_image,
-            self.gradient_point,
-            self.gradient_color,
-            thickness=2,
-            tipLength=0.3,
-        )
-
+    def draw_obstacle(self):
         cv2.circle(
             self.field_to_display,
             self.obstacle_pos,

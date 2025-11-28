@@ -23,7 +23,7 @@ class ApriltagDetector(Node):
 
         # topics
         self.image_topic = "/image_raw"  # pan-tilt camera (original)
-        self.oak_image_topic = "/oak/image_raw"  # OAK camera
+        self.oak_image_topic = "/oak/rgb/image_raw"  # OAK camera
         self.apriltag_topic = "/apriltag/detections"  # merged output (no new topic)
 
         # image processing

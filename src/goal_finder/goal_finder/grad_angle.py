@@ -105,7 +105,6 @@ class GradientAngle(Node):
         self.v_heading = R @ np.array([1.0, 0.0]) # heading direction as vector
 
     def publish_state(self):
-        self.get_logger().info("Gr")
         if self.gradient is not None:
             grad_msg = Pose2D()
             grad_msg.x = self.gradient[0]
@@ -188,7 +187,7 @@ class GradientAngle(Node):
             h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
             g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
             cross = np.cross(h3, g3)
-            angle = -angle if cross[-1]>=0.0 else angle
+            angle = -angle if cross[-1]<=0.0 else angle
 
             return angle
 

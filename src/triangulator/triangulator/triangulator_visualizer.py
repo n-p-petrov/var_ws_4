@@ -35,9 +35,10 @@ class TriangulatorVisualizer(Node):
 
         self.init_apriltag_fields()
         self.init_pos_fields()
+        self.init_goal_finder_fields()
 
         self.field_to_display = self.field_image.copy()
-        self.display_timer = self.create_timer(1 / 15, self.display_callback)
+        self.display_timer = self.create_timer(1 / 10, self.display_callback)
 
     def display_callback(self):
         """
@@ -302,6 +303,62 @@ class TriangulatorVisualizer(Node):
         self.get_logger().info(f"filtered pos in image: {point_in_image}")
 
         self.filtered_point_in_image = point_in_image
+
+    def init_goal_finder_fields(self):
+        self.gradient_point = None
+        self.obstacle_pos = None
+        self.goal_pos = None
+
+        self.gradient_subscriber = self.create_subscription(
+            Point,
+            "/grad/gradient",
+            self.gradient_callback,
+            10,
+        )
+
+        self.obstacle_subscriber = self.create_subscription(
+            Point,
+            "/grad/obstacle",
+            self.obstacle_callback,
+            10,
+        )
+
+        self.obstacle_timer = self.create_timer(1/10, self.draw_obstacle)
+
+        self.gradient_color = (255, 0, 255)
+
+    def gradient_callback(self, msg: Point):
+        if self.filtered_point_in_image:
+            self.gradient_point = (
+                msg.x / self.field_max_x * self.field_width_px
+                + self.filtered_point_in_image[0],
+                msg.y / self.field_max_y * self.field_height_px
+                + self.filtered_point_in_image[1],
+            )
+
+            cv2.arrowedLine(
+                self.field_to_display,
+                self.filtered_point_in_image,
+                self.gradient_point,
+                self.gradient_color,
+                thickness=2,
+                tipLength=0.3,
+            )
+
+    def obstacle_callback(self, msg: Point):
+        self.obstacle_pos = (
+            self.pad + msg.x / self.field_max_x * self.field_width_px,
+            self.pad + msg.y / self.field_max_y * self.field_height_px
+        )
+
+    def draw_obstacle(self):
+        cv2.circle(
+            self.field_to_display,
+            self.obstacle_pos,
+            10,
+            self.gradient_color,
+            thickness=cv2.FILLED,
+        )
 
 
 def visualize_from_stream(args=None):

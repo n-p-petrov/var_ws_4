@@ -115,7 +115,7 @@ class GradientAngle(Node):
 
     
     def timer_callback(self):
-        if self.r_angle and self.r_pos is not None and self.obs_pos is not None:
+        if self.r_angle and self.r_pos is not None:
             self.grad_angle = self.calc_grad_angle()
         self.publish_state()
     
@@ -166,7 +166,10 @@ class GradientAngle(Node):
     
     def calc_grad_angle(self):
         if self.r_angle and self.r_pos is not None:
-            gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
+            gradient = -self.U_att_grad()
+            if self.obs_pos is not None:
+                gradient -= self.U_rep_grad()
+
             grad_angle = np.arctan2(gradient[1], gradient[0])
             self.gradient = gradient
 

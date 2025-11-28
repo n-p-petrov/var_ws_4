@@ -9,8 +9,9 @@ from apriltag import apriltag  # pip install apriltag
 from apriltag_msgs.msg import AprilTagDetection, AprilTagDetectionArray
 from geometry_msgs.msg import Point
 from rclpy.node import Node
+
 # from sensor_msgs.msg import CompressedImage
-from sympy import geometry
+# from sympy import geometry
 
 
 class Triangulator(Node):
@@ -70,6 +71,36 @@ class Triangulator(Node):
     #             # print('valid intersection:', i)
     #             return (i.x.evalf(), i.y.evalf())
 
+    def intersect_circles(self, p0, r0, p1, r1):
+        (x0, y0), (x1, y1) = p0, p1
+
+        dx = x1 - x0
+        dy = y1 - y0
+        d = math.hypot(dx, dy)
+
+        # No solution
+        if d > r0 + r1:
+            return []
+        if d < abs(r0 - r1):
+            return []
+        if d == 0 and r0 == r1:
+            return []  # infinite intersections
+
+        # solve
+        a = (r0*r0 - r1*r1 + d*d) / (2*d)
+        h = math.sqrt(max(r0*r0 - a*a, 0))
+
+        xm = x0 + a * dx / d
+        ym = y0 + a * dy / d
+
+        rx = -dy * (h/d)
+        ry = dx * (h/d)
+
+        return [
+            (xm + rx, ym + ry),
+            (xm - rx, ym - ry),
+        ]
+
     def two_point_triangl(self, qrids, distances, qrmidpoints):
         id1, id2 = qrids
 
@@ -77,16 +108,17 @@ class Triangulator(Node):
         t1 = self.qr_coords[id1]
         t2 = self.qr_coords[id2]
 
-        C1 = geometry.Circle(geometry.Point2D(*t1), distances[0])
-        C2 = geometry.Circle(geometry.Point2D(*t2), distances[1])
-
-        intersections = C1.intersection(C2)
+        # C1 = geometry.Circle(geometry.Point2D(*t1), distances[0])
+        # C2 = geometry.Circle(geometry.Point2D(*t2), distances[1])
+        #
+        # intersections = C1.intersection(C2)
+        intersections = self.intersect_circles(t1, distances[0], t2, distances[1])
 
         # Keep only intersections inside the field
         candidates = []
         for inter in intersections:
-            x = float(inter.x)
-            y = float(inter.y)
+            x = float(inter[0])
+            y = float(inter[1])
             if 0 <= x <= self.width and 0 <= y <= self.height:
                 candidates.append((x, y))
 

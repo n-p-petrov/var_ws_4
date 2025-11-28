@@ -103,6 +103,7 @@ class GradientAngle(Node):
         s = np.sin(self.r_angle)
         R = np.array([[c,s],[-s,c]])
         self.v_heading = R @ np.array([1.0, 0.0]) # heading direction as vector
+        self.v_perp = R @ np.array([0.0, 1.0]) #
 
     def publish_state(self):
         if self.gradient is not None:
@@ -130,28 +131,11 @@ class GradientAngle(Node):
     def obstacle_world_coords(self, u,v,z):
         if self.r_angle and self.r_pos is not None:
             z *= 1000 # to mm
-            ray_cam_obst = np.linalg.inv(self.K) @ np.array([u,v,1]).T
-            unit_ray = ray_cam_obst / np.linalg.norm(ray_cam_obst)
-            theta = np.arccos(unit_ray[-1]) # angle optical and ray
-            ray_y0 = ray_cam_obst.copy()
-            ray_y0[1] = 0.0
-            cross = np.cross(np.array([0,0,1]), ray_y0)
-            theta = -theta if cross[1] < 0 else theta  # obstacle left or right of optical
-            rho = np.linalg.norm(z * ray_y0)
-
-            angle = theta + self.r_angle
-            ca = np.cos(angle)
-            sa = np.sin(angle)
-
-            v = np.array([1,0])
-            R = np.array([[ca, sa],[-sa, ca]]) # clockwise
-            obs_relto_robot = rho * (R@v)
-            obs_world = np.array(self.r_pos) - obs_relto_robot
-
-            # print("[OBSTACLES]")
-            # print(f"obstacle relto robot:   {obs_relto_robot}")
-            # print(f"obs in world coord  :   {obs_world}")
-
+            obs_cam = z * (np.linalg.inv(K) @ np.array([u,v,1]).T)
+            fwd_offset = obs_cam[2] * self.v_heading
+            side_offset = obs_cam[0] * self.v_perp
+            obs_relto_robot = fwd_offset + side_offset
+            obs_world = self.r_pos - obs_relto_robot
             return obs_world
     
     # ----- gradients -----

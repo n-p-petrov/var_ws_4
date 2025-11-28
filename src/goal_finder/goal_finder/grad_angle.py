@@ -99,6 +99,11 @@ class GradientAngle(Node):
         self.r_pos = np.array([msg.x, msg.y])
         self.r_angle = msg.theta
 
+        c = np.cos(self.r_angle)
+        s = np.sin(self.r_angle)
+        R = np.array([[c,s],[-s,c]])
+        self.v_heading = R @ np.array([1.0, 0.0]) # heading direction as vector
+
     def publish_state(self):
         if self.gradient is not None:
             grad_msg = Pose2D()
@@ -164,21 +169,26 @@ class GradientAngle(Node):
                 grad = np.array([0.0, 0.0])
             return grad
     
+    # note: this is not the gradient angle, but rather the angle between
+    #       the gradient and the heading direction.
     def calc_grad_angle(self):
+        unit = lambda u: u/np.linalg.norm(u)
+
         if self.r_angle and self.r_pos is not None:
             gradient = -self.U_att_grad()
             if self.obs_pos is not None:
                 gradient -= self.U_rep_grad()
-
-            grad_angle = np.arctan2(gradient[1], gradient[0])
             self.gradient = gradient
 
-            # print("[GRADIENTS]")
-            # print(f"gradient :   {gradient}")
-            # print(f"Angle: {grad_angle:.3f} | Magnitude {np.linalg.norm(gradient)}")
-            # print(f"magnitude:   {np.linalg.norm(gradient)}")
+            cos_a = unit(self.v_heading).T @ unit(self.gradient)
+            angle = np.arccos(cos_a)
 
-            return grad_angle
+            h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
+            g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
+            cross = np.cross(h3, g3)
+            angle = -angle if cross[-1]>=0.0 else angle
+
+            return angle
 
 
 def main(ros_args=None):

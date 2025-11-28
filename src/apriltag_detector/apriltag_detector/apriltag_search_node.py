@@ -49,9 +49,9 @@ class AprilTagSearchNode(Node):
             self.empty_count += 1
 
         if self.empty_count >= self.TOLERANCE:
-            self.get_logger().info(
-                f"No apriltags detected in the past {self.TOLERANCE} messages. Tilting the camera..."
-            )
+            # self.get_logger().info(
+            #     f"No apriltags detected in the past {self.TOLERANCE} messages. Tilting the camera..."
+            # )
             self.camera_step()
             self.empty_count = 0
 
@@ -60,9 +60,9 @@ class AprilTagSearchNode(Node):
             self.direction = self.direction * (-1)
 
         self.current_angle = self.current_angle + self.direction * self.STEP_SIZE
-        self.get_logger().info(
-            f"Moving the camera to position: {int(self.current_angle / PI * 180)} degrees."
-        )
+        # self.get_logger().info(
+        #     f"Moving the camera to position: {int(self.current_angle / PI * 180)} degrees."
+        # )
 
         joint_msg = JointState()
         joint_msg.header.stamp = self.get_clock().now().to_msg()

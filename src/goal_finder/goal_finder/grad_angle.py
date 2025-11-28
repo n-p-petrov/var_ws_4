@@ -1,9 +1,11 @@
+import argparse
+
 import numpy as np
 import rclpy
+from geometry_msgs.msg import Point, PointStamped, Pose2D
 from rclpy.node import Node
-from geometry_msgs.msg import PointStamped, Pose2D, Point
 from std_msgs.msg import Float32
-import argparse
+
 
 class GradientAngle(Node):
     def __init__(self, target):
@@ -169,7 +171,7 @@ class GradientAngle(Node):
 
             # print("[GRADIENTS]")
             # print(f"gradient :   {gradient}")
-            print(f"Angle: {grad_angle:.3f} | Magnitude {np.linalg.norm(gradient)}")
+            # print(f"Angle: {grad_angle:.3f} | Magnitude {np.linalg.norm(gradient)}")
             # print(f"magnitude:   {np.linalg.norm(gradient)}")
 
             return grad_angle

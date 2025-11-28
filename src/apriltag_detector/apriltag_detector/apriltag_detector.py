@@ -43,12 +43,18 @@ class ApriltagDetector(Node):
         self.bridge = CvBridge()
         self.apriltagdetector = apriltag(self.apriltag_family)
 
-        # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
-        # width = 640, height = 480
-        fx = 298.904369
-        fy = 300.029312
-        cx = 333.732172
-        cy = 257.804732
+        # # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
+        # # width = 640, height = 480
+        # fx = 298.904369
+        # fy = 300.029312
+        # cx = 333.732172
+        # cy = 257.804732
+
+        # width = 1280, height = 960
+        fx = 593.71791
+        fy = 594.63245
+        cx = 600.14117
+        cy = 471.7425
 
         self.camera_matrix = np.array(
             [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
@@ -56,8 +62,14 @@ class ApriltagDetector(Node):
         )
 
         # undistorted images,
+        # # width = 640, height = 480
+        # self.dist_coeffs = np.array(
+        #     [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
+        # ).reshape(-1, 1)
+
+        # width = 1280, height = 960
         self.dist_coeffs = np.array(
-            [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
+            [-0.198828, 0.027275, 0.002388, -0.001270, 0.000000]
         ).reshape(-1, 1)
 
         self.total_num_tags = 0
@@ -69,9 +81,11 @@ class ApriltagDetector(Node):
         )
 
         # image size
-        w = 640
-        h = 480
+        # w = 640
+        # h = 480
 
+        w = 1280
+        h = 960
         # compute the new camera matrix for the undistorted image
         self.new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(
             self.camera_matrix,
@@ -105,7 +119,6 @@ class ApriltagDetector(Node):
         self.camera_pan_angle = None
 
         self.last_orientation = None
-        self.orientation_alpha = 0.3  # 0..1, smaller = smoother
 
     def camera_pan_callback(self, msg):
         self.camera_pan_angle = float(msg.data)

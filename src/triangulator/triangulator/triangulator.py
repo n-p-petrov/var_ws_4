@@ -50,8 +50,10 @@ class Triangulator(Node):
         self.pos = None
         self.last_valid_pos = (-1, -1)
 
-        self.image_width = 640  # placeholder, set according to actual image size
-        self.image_height = 480  # placeholder, set according to actual image size
+        # self.image_width = 640  # placeholder, set according to actual image size
+        # self.image_height = 480  # placeholder, set according to actual image size
+        self.image_width = 1280  # placeholder, set according to actual image size
+        self.image_height = 960  # placeholder, set according to actual image size
 
     # def two_point_triangl(self, qrids, distances) -> tuple:
     #     coords1 = self.qr_coords.get(qrids[0])

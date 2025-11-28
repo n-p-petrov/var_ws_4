@@ -32,11 +32,18 @@ class ApriltagVisualizer(Node):
         self.text_color = (50, 255, 0)  # neon green for ID
         self.dist_color = (0, 200, 255)  # yellow-ish for distance
 
-        # intrinsics
-        fx = 298.904369
-        fy = 300.029312
-        cx = 333.732172
-        cy = 257.804732
+        # # HARDCODED CAMERA INTRINSICS (from calibration of image_raw)
+        # # width = 640, height = 480
+        # fx = 298.904369
+        # fy = 300.029312
+        # cx = 333.732172
+        # cy = 257.804732
+
+        # width = 1280, height = 960
+        fx = 593.71791
+        fy = 594.63245
+        cx = 600.14117
+        cy = 471.7425
 
         self.camera_matrix = np.array(
             [[fx, 0.0, cx], [0.0, fy, cy], [0.0, 0.0, 1.0]],
@@ -44,16 +51,22 @@ class ApriltagVisualizer(Node):
         )
 
         # undistorted images,
+        # # width = 640, height = 480
+        # self.dist_coeffs = np.array(
+        #     [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
+        # ).reshape(-1, 1)
+
+        # width = 1280, height = 960
         self.dist_coeffs = np.array(
-            [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
+            [-0.198828, 0.027275, 0.002388, -0.001270, 0.000000]
         ).reshape(-1, 1)
 
     def image_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
         self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        self.latest_image = cv2.undistort(
-            self.latest_image, self.camera_matrix, self.dist_coeffs
-        )
+        # self.latest_image = cv2.undistort(
+        #     self.latest_image, self.camera_matrix, self.dist_coeffs
+        # )
 
         if self.latest_tags:
             self.draw_tags(self.latest_image, self.latest_tags)

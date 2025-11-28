@@ -13,6 +13,7 @@ class MoverNode(Node):
         self.DURATION_LINEAR_MOVE = 0.5  # seconds
         self.ANGULAR_VELOCITY = pi / 4  # radians per second
         self.STOPPING_MAGNITUDE = 500
+        self.busy = False
 
         self.drive_publisher = drive_publisher
 
@@ -41,7 +42,13 @@ class MoverNode(Node):
         return (a + pi) % (2.0 * pi) - pi
 
     def move_along_gradient(self):
-        if self.latest_gradient_pose and self.latest_robot_pose:
+        if self.busy:
+            return
+        if not (self.latest_gradient_pose and self.latest_robot_pose):
+            return
+
+        self.busy = True
+        try:
             grad_magnitude = np.linalg.norm(
                 [self.latest_gradient_pose.x, self.latest_gradient_pose.y]
             )
@@ -58,3 +65,5 @@ class MoverNode(Node):
                 self.drive_publisher.move_forward(
                     self.DURATION_LINEAR_MOVE, self.LINEAR_VELOCITY
                 )
+        finally:
+            self.busy = False

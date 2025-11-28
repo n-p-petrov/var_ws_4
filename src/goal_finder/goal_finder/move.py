@@ -41,7 +41,7 @@ def main(ros_args=None):
         print("Starting the gradient node")
         gradient_node = GradientAngle(target=args.target)
         # ---- run all nodes together ----
-        executor = rclpy.executors.MultiThreadedExecutor(num_threads=10)
+        executor = rclpy.executors.MultiThreadedExecutor(num_threads=5)
 
         # executor.add_node(drive_publisher)
         executor.add_node(apriltag_detector)

@@ -38,7 +38,7 @@ class TriangulatorVisualizer(Node):
         self.init_goal_finder_fields()
 
         self.field_to_display = self.field_image.copy()
-        self.display_timer = self.create_timer(1 / 10, self.display_callback)
+        self.display_timer = self.create_timer(1 / 20, self.display_callback)
 
     def display_callback(self):
         """
@@ -146,14 +146,16 @@ class TriangulatorVisualizer(Node):
 
             # distance
             distance_in_mm = detection.goodness * 1000
-            distance_in_pixels = int(distance_in_mm / self.field_max_x * self.field_width_px)
+            distance_in_pixels = int(
+                distance_in_mm / self.field_max_x * self.field_width_px
+            )
             cv2.circle(
                 self.field_to_display,
                 center=(px, py),
                 radius=distance_in_pixels,
                 color=self.apriltag_distance_color,
                 thickness=2,
-                lineType=cv2.LINE_8
+                lineType=cv2.LINE_8,
             )
 
     # --- Position visualization functions ---
@@ -179,7 +181,6 @@ class TriangulatorVisualizer(Node):
         point_in_image = (
             int(
                 self.pad
-
                 + min(
                     max(
                         point_in_field.x / self.field_max_x * self.field_width_px,
@@ -275,7 +276,7 @@ class TriangulatorVisualizer(Node):
 
     def pos_callback_filtered(self, point_in_field):
         self.filtered_point_in_field = point_in_field
-        self.filtered_theta = point_in_field.theta # NEW
+        self.filtered_theta = point_in_field.theta  # NEW
 
         # self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
@@ -323,7 +324,7 @@ class TriangulatorVisualizer(Node):
             10,
         )
 
-        self.obstacle_timer = self.create_timer(1/10, self.draw_obstacle)
+        self.obstacle_timer = self.create_timer(1 / 20, self.draw_obstacle)
 
         self.gradient_color = (255, 0, 255)
 
@@ -348,7 +349,7 @@ class TriangulatorVisualizer(Node):
     def obstacle_callback(self, msg: Point):
         self.obstacle_pos = (
             self.pad + msg.x / self.field_max_x * self.field_width_px,
-            self.pad + msg.y / self.field_max_y * self.field_height_px
+            self.pad + msg.y / self.field_max_y * self.field_height_px,
         )
 
     def draw_obstacle(self):

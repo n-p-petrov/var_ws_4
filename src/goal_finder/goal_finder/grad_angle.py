@@ -105,6 +105,7 @@ class GradientAngle(Node):
         self.v_heading = R @ np.array([1.0, 0.0]) # heading direction as vector
 
     def publish_state(self):
+        self.get_logger().info("Gr")
         if self.gradient is not None:
             grad_msg = Pose2D()
             grad_msg.x = self.gradient[0]
@@ -121,6 +122,7 @@ class GradientAngle(Node):
     
     def timer_callback(self):
         if self.r_angle and self.r_pos is not None:
+            self.get_logger().info(f"Grad delta: {self.grad_angle}")
             self.grad_angle = self.calc_grad_angle()
         self.publish_state()
     

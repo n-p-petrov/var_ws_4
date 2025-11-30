@@ -1,3 +1,4 @@
+import time
 from math import pi
 
 import numpy as np
@@ -10,7 +11,7 @@ class MoverNode(Node):
     def __init__(self, drive_publisher: DrivePublisher):
         super().__init__("mover_node")
         self.LINEAR_VELOCITY = 0.2  # something per second
-        self.DURATION_LINEAR_MOVE = 0.5  # seconds
+        self.DURATION_LINEAR_MOVE = 1.0  # seconds
         self.ANGULAR_VELOCITY = pi / 4  # radians per second
         self.STOPPING_MAGNITUDE = 500
         self.busy = False
@@ -28,9 +29,6 @@ class MoverNode(Node):
     def gradient_callback(self, msg: Pose2D):
         self.latest_gradient_pose = msg
         self.move_along_gradient()
-
-    def wrap_angle(self, a: float) -> float:
-        return (a + pi) % (2.0 * pi) - pi
 
     def move_along_gradient(self):
         if self.busy:
@@ -55,5 +53,6 @@ class MoverNode(Node):
                 self.drive_publisher.move_forward(
                     self.DURATION_LINEAR_MOVE, self.LINEAR_VELOCITY
                 )
+                time.sleep(2)  # attempt to detect apriltags while stationary
         finally:
             self.busy = False

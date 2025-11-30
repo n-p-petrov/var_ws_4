@@ -30,6 +30,9 @@ class MoverNode(Node):
         self.latest_gradient_pose = msg
         self.move_along_gradient()
 
+    def _wrap_to_pi(self, a):
+        return (a + np.pi) % (2 * np.pi) - np.pi
+
     def move_along_gradient(self):
         if self.busy:
             return
@@ -48,7 +51,7 @@ class MoverNode(Node):
                     self.get_logger().info(
                         f"Turning by {int(turn_angle / pi * 180)} degrees."
                     )
-                    self.drive_publisher.turn(turn_angle, self.ANGULAR_VELOCITY)
+                    self.drive_publisher.turn(self._wrap_to_pi(turn_angle), self.ANGULAR_VELOCITY)
 
                 self.drive_publisher.move_forward(
                     self.DURATION_LINEAR_MOVE, self.LINEAR_VELOCITY

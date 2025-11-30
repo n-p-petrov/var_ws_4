@@ -14,8 +14,8 @@ def to_rads(degrees):
 class AprilTagSearchNode(Node):
     def __init__(self):
         super().__init__("apriltag_search_node")
-        self.STEP_SIZE = to_rads(10)
-        self.ANGLE_LIMIT = to_rads(80)
+        self.STEP_SIZE = to_rads(15)
+        self.ANGLE_LIMIT = to_rads(60)
         self.TOLERANCE = 7
 
         self.direction = 1

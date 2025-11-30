@@ -14,8 +14,8 @@ def to_rads(degrees):
 class AprilTagSearchNode(Node):
     def __init__(self):
         super().__init__("apriltag_search_node")
-        self.STEP_SIZE = to_rads(10)
-        self.ANGLE_LIMIT = to_rads(80)
+        self.STEP_SIZE = to_rads(15)
+        self.ANGLE_LIMIT = to_rads(60)
         self.TOLERANCE = 7
 
         self.direction = 1
@@ -49,9 +49,9 @@ class AprilTagSearchNode(Node):
             self.empty_count += 1
 
         if self.empty_count >= self.TOLERANCE:
-            self.get_logger().info(
-                f"No apriltags detected in the past {self.TOLERANCE} messages. Tilting the camera..."
-            )
+            # self.get_logger().info(
+            #     f"No apriltags detected in the past {self.TOLERANCE} messages. Tilting the camera..."
+            # )
             self.camera_step()
             self.empty_count = 0
 
@@ -60,9 +60,9 @@ class AprilTagSearchNode(Node):
             self.direction = self.direction * (-1)
 
         self.current_angle = self.current_angle + self.direction * self.STEP_SIZE
-        self.get_logger().info(
-            f"Moving the camera to position: {int(self.current_angle / PI * 180)} degrees."
-        )
+        # self.get_logger().info(
+        #     f"Moving the camera to position: {int(self.current_angle / PI * 180)} degrees."
+        # )
 
         joint_msg = JointState()
         joint_msg.header.stamp = self.get_clock().now().to_msg()

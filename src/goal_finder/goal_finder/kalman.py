@@ -1,10 +1,9 @@
 import math
+
 import numpy as np
-
 import rclpy
+from geometry_msgs.msg import Point, Pose2D, Twist
 from rclpy.node import Node
-
-from geometry_msgs.msg import Twist, Pose2D, Point
 from std_msgs.msg import Float32
 
 
@@ -24,11 +23,11 @@ class EkfNode(Node):
     """
 
     def __init__(self):
-        super().__init__('ekf_node')
+        super().__init__("ekf_node")
 
         # --- State and covariance ---
-        self.x = np.zeros((3, 1))   # [x, y, theta]
-        self.P = np.eye(3) * 1.0    # initial covariance
+        self.x = np.zeros((3, 1))  # [x, y, theta]
+        self.P = np.eye(3) * 1.0  # initial covariance
 
         # Process noise (tune these!)
         # [x, y, theta]
@@ -38,7 +37,7 @@ class EkfNode(Node):
         self.R_xy = np.diag([0.02, 0.02])  # for (x, y) from triangulator
 
         # Control inputs from cmd_vel
-        self.v = 0.0      # linear velocity
+        self.v = 0.0  # linear velocity
         self.omega = 0.0  # angular velocity
 
         # For dt computation
@@ -46,38 +45,25 @@ class EkfNode(Node):
 
         # --- Subscribers ---
         self.cmd_vel_sub = self.create_subscription(
-            Twist,
-            '/cmd_vel',
-            self.cmd_vel_callback,
-            10
+            Twist, "/cmd_vel", self.cmd_vel_callback, 10
         )
 
         self.triangulated_pos_sub = self.create_subscription(
-            Point,
-            '/triangulated_pos',
-            self.triangulated_callback,
-            10
+            Point, "/triangulated_pos", self.triangulated_callback, 10
         )
 
         # orientation of robot (already accounts for camera angle / phi)
         self.orientation_sub = self.create_subscription(
-            Float32,
-            '/orientation',
-            self.orientation_callback,
-            10
+            Float32, "/orientation", self.orientation_callback, 10
         )
 
         # --- Publisher ---
-        self.filtered_pose_pub = self.create_publisher(
-            Pose2D,
-            '/filtered_pose',
-            10
-        )
+        self.filtered_pose_pub = self.create_publisher(Pose2D, "/filtered_pose", 10)
 
         # Timer for continuous prediction
         self.timer = self.create_timer(0.02, self.timer_callback)  # 50 Hz
 
-        self.get_logger().info('EKF node (3D: x,y,theta) initialized')
+        self.get_logger().info("EKF node (3D: x,y,theta) initialized")
 
     # ------------- Callbacks -------------
 
@@ -94,14 +80,15 @@ class EkfNode(Node):
         if msg.x < 0.0 or msg.y < 0.0:
             return
 
-        z = np.array([[msg.x],
-                      [msg.y]])
+        z = np.array([[msg.x], [msg.y]])
 
         # H maps state [x, y, theta] -> [x, y]
-        H = np.array([
-            [1.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0],
-        ])
+        H = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+            ]
+        )
 
         def h(x_vec):
             return x_vec[0:2, :]  # [x, y]
@@ -159,16 +146,16 @@ class EkfNode(Node):
         y_new = y_val + v * dt * math.sin(th)
         th_new = wrap_angle(th + omega * dt)
 
-        self.x = np.array([[x_new],
-                           [y_new],
-                           [th_new]])
+        self.x = np.array([[x_new], [y_new], [th_new]])
 
         # Jacobian F of f(x, u)
-        F = np.array([
-            [1.0, 0.0, -v * dt * math.sin(th)],
-            [0.0, 1.0,  v * dt * math.cos(th)],
-            [0.0, 0.0,  1.0],
-        ])
+        F = np.array(
+            [
+                [1.0, 0.0, -v * dt * math.sin(th)],
+                [0.0, 1.0, v * dt * math.cos(th)],
+                [0.0, 0.0, 1.0],
+            ]
+        )
 
         self.P = F @ self.P @ F.T + self.Q
 
@@ -177,15 +164,15 @@ class EkfNode(Node):
         Generic EKF update step.
         For 1D measurements (theta), we wrap the innovation as an angle.
         """
-        z_hat = h_func(self.x)      # expected measurement
-        y = z - z_hat               # innovation
+        z_hat = h_func(self.x)  # expected measurement
+        y = z - z_hat  # innovation
 
         # If this is a 1x1 measurement (like theta), treat it as an angle and wrap
         if y.shape == (1, 1):
             y[0, 0] = wrap_angle(y[0, 0])
 
-        S = H @ self.P @ H.T + R            # innovation covariance
-        K = self.P @ H.T @ np.linalg.inv(S) # Kalman gain
+        S = H @ self.P @ H.T + R  # innovation covariance
+        K = self.P @ H.T @ np.linalg.inv(S)  # Kalman gain
 
         self.x = self.x + K @ y
 
@@ -207,9 +194,9 @@ class EkfNode(Node):
         # If your visualizer needs Pose2D with theta, this is what it should subscribe to
         self.filtered_pose_pub.publish(pose_msg)
 
-        self.get_logger().info(
-            f"x={pose_msg.x:.2f}, y={pose_msg.y:.2f}, theta={pose_msg.theta:.2f}"
-        )
+        # self.get_logger().info(
+        #     f"x={pose_msg.x:.2f}, y={pose_msg.y:.2f}, theta={pose_msg.theta:.2f}"
+        # )
 
 
 def main(args=None):

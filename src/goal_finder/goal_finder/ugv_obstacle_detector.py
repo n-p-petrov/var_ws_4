@@ -82,7 +82,7 @@ class UGVObstacleDetector(Node):
         3. Run color+depth detection.
         """
         if self.latest_depth is None:
-            self.get_logger().warn("RGB frame received but no depth yet.")
+            # self.get_logger().warn("RGB frame received but no depth yet.")
             return
 
         bgr = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
@@ -106,10 +106,10 @@ class UGVObstacleDetector(Node):
             cx, cy, dist_m = obstacle_info
 
             # You can still log detection
-            self.get_logger().info(
-                f"Detected rover at distance {dist_m:.2f} m, "
-                f"image position x={cx}, y={cy}"
-            )
+            # self.get_logger().info(
+            #     f"Detected rover at distance {dist_m:.2f} m, "
+            #     f"image position x={cx}, y={cy}"
+            # )
 
             msg_out.point.x = float(cx)
             msg_out.point.y = float(cy)

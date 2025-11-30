@@ -38,7 +38,7 @@ class TriangulatorVisualizer(Node):
         self.init_goal_finder_fields()
 
         self.field_to_display = self.field_image.copy()
-        self.display_timer = self.create_timer(1 / 10, self.display_callback)
+        self.display_timer = self.create_timer(1 / 20, self.display_callback)
 
     def display_callback(self):
         """
@@ -146,14 +146,16 @@ class TriangulatorVisualizer(Node):
 
             # distance
             distance_in_mm = detection.goodness * 1000
-            distance_in_pixels = int(distance_in_mm / self.field_max_x * self.field_width_px)
+            distance_in_pixels = int(
+                distance_in_mm / self.field_max_x * self.field_width_px
+            )
             cv2.circle(
                 self.field_to_display,
                 center=(px, py),
                 radius=distance_in_pixels,
                 color=self.apriltag_distance_color,
                 thickness=2,
-                lineType=cv2.LINE_8
+                lineType=cv2.LINE_8,
             )
 
     # --- Position visualization functions ---
@@ -175,11 +177,10 @@ class TriangulatorVisualizer(Node):
         self.filtered_pos_color = (255, 0, 0)  # BGR
 
     def pos_callback(self, point_in_field):
-        self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
+        # self.get_logger().info(f"pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
             int(
                 self.pad
-
                 + min(
                     max(
                         point_in_field.x / self.field_max_x * self.field_width_px,
@@ -200,7 +201,7 @@ class TriangulatorVisualizer(Node):
             ),
         )
 
-        self.get_logger().info(f"pos in image: {point_in_image}")
+        # self.get_logger().info(f"pos in image: {point_in_image}")
         cv2.circle(
             self.field_to_display,
             point_in_image,
@@ -260,9 +261,9 @@ class TriangulatorVisualizer(Node):
         # Convert from field frame (standard math: up is +y) to image (down is +y)
         x1 = int(x0 + arrow_length * math.cos(theta))
         y1 = int(y0 + arrow_length * math.sin(theta))
-        self.get_logger().info(
-            f"Drawing arrow from ({x0}, {y0}) to ({x1}, {y1}) with theta={theta} rad"
-        )
+        # self.get_logger().info(
+        #     f"Drawing arrow from ({x0}, {y0}) to ({x1}, {y1}) with theta={theta} rad"
+        # )
 
         cv2.arrowedLine(
             img,
@@ -275,9 +276,9 @@ class TriangulatorVisualizer(Node):
 
     def pos_callback_filtered(self, point_in_field):
         self.filtered_point_in_field = point_in_field
-        self.filtered_theta = point_in_field.theta # NEW
+        self.filtered_theta = point_in_field.theta  # NEW
 
-        self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
+        # self.get_logger().info(f"filtered_pos: {point_in_field.x}, {point_in_field.y}")
         point_in_image = (
             int(
                 self.pad
@@ -300,7 +301,7 @@ class TriangulatorVisualizer(Node):
                 )
             ),
         )
-        self.get_logger().info(f"filtered pos in image: {point_in_image}")
+        # self.get_logger().info(f"filtered pos in image: {point_in_image}")
 
         self.filtered_point_in_image = point_in_image
 
@@ -310,7 +311,7 @@ class TriangulatorVisualizer(Node):
         self.goal_pos = None
 
         self.gradient_subscriber = self.create_subscription(
-            Point,
+            Pose2D,
             "/grad/gradient",
             self.gradient_callback,
             10,
@@ -323,17 +324,17 @@ class TriangulatorVisualizer(Node):
             10,
         )
 
-        self.obstacle_timer = self.create_timer(1/10, self.draw_obstacle)
+        self.obstacle_timer = self.create_timer(1 / 20, self.draw_obstacle)
 
-        self.gradient_color = (255, 0, 255)
+        self.gradient_color = (255, 255, 255)
 
-    def gradient_callback(self, msg: Point):
+    def gradient_callback(self, msg: Pose2D):
         if self.filtered_point_in_image:
             self.gradient_point = (
-                msg.x / self.field_max_x * self.field_width_px
-                + self.filtered_point_in_image[0],
-                msg.y / self.field_max_y * self.field_height_px
-                + self.filtered_point_in_image[1],
+                int(msg.x / self.field_max_x * self.field_width_px
+                + self.filtered_point_in_image[0]),
+                int(msg.y / self.field_max_y * self.field_height_px
+                + self.filtered_point_in_image[1]),
             )
 
             cv2.arrowedLine(
@@ -347,8 +348,8 @@ class TriangulatorVisualizer(Node):
 
     def obstacle_callback(self, msg: Point):
         self.obstacle_pos = (
-            self.pad + msg.x / self.field_max_x * self.field_width_px,
-            self.pad + msg.y / self.field_max_y * self.field_height_px
+           int(self.pad + msg.x / self.field_max_x * self.field_width_px),
+           int(self.pad + msg.y / self.field_max_y * self.field_height_px),
         )
 
     def draw_obstacle(self):

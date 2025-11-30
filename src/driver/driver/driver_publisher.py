@@ -17,26 +17,23 @@ class DrivePublisher(Node):
         """
         Tells the robot to turn by some angle.
 
+        positive angle -> rotate right
+        negative angle -> rotate left
+
         Args:
             angle (float): Angle to turn by in radians.
-                If angle < 0, turns left.
-                If angle > 0, turns right.
             angular_speed (float): radians per second
         """
         msg = Twist()
         duration = abs(radians) / angular_speed
-        msg.angular.z = angular_speed if radians > 0 else -angular_speed
+        msg.angular.z = -angular_speed if radians > 0 else angular_speed
 
-        self.get_logger().info(f"Turning {radians} radians for {duration:.2f}s")
-
-        start = time.time()
-        while time.time() - start < duration:
+        for _ in range(5):
             self.publisher.publish(msg)
-            time.sleep(0.05)  # wait 5 ms before asking the robot to turn again
+        time.sleep(duration)
 
-        for i in range(5):
+        for _ in range(5):
             self.publisher.publish(Twist())
-        self.get_logger().info("Turn completed.")
 
     def move_forward(self, duration, speed):
         """
@@ -49,18 +46,12 @@ class DrivePublisher(Node):
         msg = Twist()
         msg.linear.x = speed
 
-        self.get_logger().info(
-            f"Moving forward for {duration} sec with {speed} rad/sec."
-        )
-
-        start = time.time()
-        while time.time() - start < duration:
+        for _ in range(5):
             self.publisher.publish(msg)
-            time.sleep(0.05)  # wait 5 ms before asking the robot to move forward again
+        time.sleep(duration)
 
-        for i in range(5):
+        for _ in range(5):
             self.publisher.publish(Twist())
-        self.get_logger().info("Moving forward completed.")
 
 
 def main(args=None):

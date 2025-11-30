@@ -1,9 +1,11 @@
+import argparse
+
 import numpy as np
 import rclpy
+from geometry_msgs.msg import Point, PointStamped, Pose2D
 from rclpy.node import Node
-from geometry_msgs.msg import PointStamped, Pose2D, Point
 from std_msgs.msg import Float32
-import argparse
+
 
 class GradientAngle(Node):
     def __init__(self, target):
@@ -74,7 +76,7 @@ class GradientAngle(Node):
         # obstacle location
 
         self.gradient_pub = self.create_publisher(
-            Point, "/grad/gradient", 10
+            Pose2D, "/grad/gradient", 10
         )
         self.obstacle_pub = self.create_publisher(
             Point, "grad/obstacle", 10
@@ -97,11 +99,18 @@ class GradientAngle(Node):
         self.r_pos = np.array([msg.x, msg.y])
         self.r_angle = msg.theta
 
+        c = np.cos(self.r_angle)
+        s = np.sin(self.r_angle)
+        R = np.array([[c,s],[-s,c]])
+        self.v_heading = R @ np.array([1.0, 0.0]) # heading direction as vector
+        self.v_perp = R @ np.array([0.0, 1.0]) #
+
     def publish_state(self):
         if self.gradient is not None:
-            grad_msg = Point()
+            grad_msg = Pose2D()
             grad_msg.x = self.gradient[0]
             grad_msg.y = self.gradient[1]
+            grad_msg.theta = self.grad_angle
             self.gradient_pub.publish(grad_msg)
 
         if self.obs_pos is not None:
@@ -112,7 +121,8 @@ class GradientAngle(Node):
 
     
     def timer_callback(self):
-        if self.r_angle and self.r_pos is not None and self.obs_pos is not None:
+        if self.r_angle and self.r_pos is not None:
+            self.get_logger().info(f"Grad delta: {self.grad_angle}")
             self.grad_angle = self.calc_grad_angle()
         self.publish_state()
     
@@ -121,28 +131,11 @@ class GradientAngle(Node):
     def obstacle_world_coords(self, u,v,z):
         if self.r_angle and self.r_pos is not None:
             z *= 1000 # to mm
-            ray_cam_obst = np.linalg.inv(self.K) @ np.array([u,v,1]).T
-            unit_ray = ray_cam_obst / np.linalg.norm(ray_cam_obst)
-            theta = np.arccos(unit_ray[-1]) # angle optical and ray
-            ray_y0 = ray_cam_obst.copy()
-            ray_y0[1] = 0.0
-            cross = np.cross(np.array([0,0,1]), ray_y0)
-            theta = -theta if cross[1] < 0 else theta  # obstacle left or right of optical
-            rho = np.linalg.norm(z * ray_y0)
-
-            angle = theta + self.r_angle
-            ca = np.cos(angle)
-            sa = np.sin(angle)
-
-            v = np.array([1,0])
-            R = np.array([[ca, sa],[-sa, ca]]) # clockwise
-            obs_relto_robot = rho * (R@v)
-            obs_world = np.array(self.r_pos) - obs_relto_robot
-
-            # print("[OBSTACLES]")
-            # print(f"obstacle relto robot:   {obs_relto_robot}")
-            # print(f"obs in world coord  :   {obs_world}")
-
+            obs_cam = z * (np.linalg.inv(self.K) @ np.array([u,v,1]).T)
+            fwd_offset = obs_cam[2] * self.v_heading
+            side_offset = obs_cam[0] * self.v_perp
+            obs_relto_robot = fwd_offset + side_offset
+            obs_world = self.r_pos - obs_relto_robot
             return obs_world
     
     # ----- gradients -----
@@ -161,18 +154,26 @@ class GradientAngle(Node):
                 grad = np.array([0.0, 0.0])
             return grad
     
+    # note: this is not the gradient angle, but rather the angle between
+    #       the gradient and the heading direction.
     def calc_grad_angle(self):
+        unit = lambda u: u/np.linalg.norm(u)
+
         if self.r_angle and self.r_pos is not None:
-            gradient = -1 * (self.U_att_grad() + self.U_rep_grad()) # descent
-            grad_angle = np.arctan2(gradient[1], gradient[0])
+            gradient = -self.U_att_grad()
+            if self.obs_pos is not None:
+                gradient -= self.U_rep_grad()
             self.gradient = gradient
 
-            # print("[GRADIENTS]")
-            # print(f"gradient :   {gradient}")
-            print(f"Angle: {grad_angle:.3f} | Magnitude {np.linalg.norm(gradient)}")
-            # print(f"magnitude:   {np.linalg.norm(gradient)}")
+            cos_a = unit(self.v_heading).T @ unit(self.gradient)
+            angle = np.arccos(cos_a)
 
-            return grad_angle
+            h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
+            g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
+            cross = np.cross(h3, g3)
+            angle = -angle if cross[-1]<=0.0 else angle
+
+            return angle
 
 
 def main(ros_args=None):

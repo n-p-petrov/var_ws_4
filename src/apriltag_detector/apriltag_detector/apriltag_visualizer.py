@@ -14,7 +14,7 @@ class ApriltagVisualizer(Node):
 
         # subscribe to the raw camera image
         self.image_subscriber = self.create_subscription(
-            CompressedImage, "/image_raw/compressed", self.image_callback, 10
+            CompressedImage, "/oak/rgb/image_raw/compressed", self.image_callback, 10
         )
 
         # subscribe to AprilTag detections from ApriltagDetector
@@ -51,9 +51,9 @@ class ApriltagVisualizer(Node):
     def image_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
         self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-        self.latest_image = cv2.undistort(
-            self.latest_image, self.camera_matrix, self.dist_coeffs
-        )
+        # self.latest_image = cv2.undistort(
+        #     self.latest_image, self.camera_matrix, self.dist_coeffs
+        # )
 
         if self.latest_tags:
             self.draw_tags(self.latest_image, self.latest_tags)

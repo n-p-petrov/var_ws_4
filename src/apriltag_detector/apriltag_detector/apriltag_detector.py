@@ -244,15 +244,27 @@ class ApriltagDetector(Node):
         # when the angle is positive the viewing axis is to the right of the apriltag
         # when the angle is negative the viewing axis is to the left of the apriltag
 
-        # self.get_logger().info(
-        #     f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
-        # )
+        self.get_logger().info(
+            f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
+        )
         robot_orientation = angle_to_optic_axis + self.tag_orientation[tag_id]
 
         if self.camera_pan_angle:
             robot_orientation = robot_orientation - self.camera_pan_angle
 
+        self.get_logger().info(
+            f"Camera orientation wrt apriltag: {angle_to_optic_axis}"
+        )
+        self.get_logger().info(
+            f"Pan: {self.camera_pan_angle}"
+        )
+        self.get_logger().info(
+            f"Robot Orientation: {robot_orientation}"
+        )
         robot_orientation = wrap_angle(robot_orientation)
+        self.get_logger().info(
+            f"Wrapped Orientation: {robot_orientation}"
+        )
         # --- Smooth it ---
         # if self.last_orientation is None:
         #     self.last_orientation = robot_orientation

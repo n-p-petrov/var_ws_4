@@ -48,11 +48,23 @@ class ApriltagVisualizer(Node):
             [-0.230681, 0.034978, -0.001247, 0.001166, 0.000000]
         ).reshape(-1, 1)
 
+        # image size
+        w = 640
+        h = 480
+
+        # compute the new camera matrix for the undistorted image
+        self.new_camera_matrix, _ = cv2.getOptimalNewCameraMatrix(
+            self.camera_matrix,
+            self.dist_coeffs,
+            (w, h),
+            0,  # alpha=0 keeps a clean free-of-black-borders image
+        )
+
     def image_callback(self, msg):
         np_arr = np.frombuffer(msg.data, np.uint8)
         self.latest_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         self.latest_image = cv2.undistort(
-            self.latest_image, self.camera_matrix, self.dist_coeffs
+            self.latest_image, self.camera_matrix, self.dist_coeffs, None, self.new_camera_matrix
         )
 
         if self.latest_tags:

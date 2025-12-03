@@ -87,7 +87,7 @@ class GradientAngle(Node):
 
     def obstacle_callback(self, msg:PointStamped):
         #print("obstacle_callback", msg)
-        if self.r_angle and self.r_pos is not None:
+        if self.r_angle is not None and self.r_pos is not None:
             u = msg.point.x
             v = msg.point.y
             z = msg.point.z
@@ -119,17 +119,18 @@ class GradientAngle(Node):
             obs_msg.y = self.obs_pos[1]
             self.obstacle_pub.publish(obs_msg)
 
-    
     def timer_callback(self):
-        if self.r_angle and self.r_pos is not None:
-            # self.get_logger().info(f"Grad delta: {self.grad_angle}")
+        if self.r_angle is not None and self.r_pos is not None:
             self.grad_angle = self.calc_grad_angle()
+            if self.grad_angle is not None:
+                # self.get_logger().info(f"Grad delta: {self.grad_angle:.3f} rad")
+                pass
         self.publish_state()
-    
+
     # ----- coordinate transformations -----
 
     def obstacle_world_coords(self, u,v,z):
-        if self.r_angle and self.r_pos is not None:
+        if self.r_angle is not None and self.r_pos is not None:
             z *= 1000 # to mm
             obs_cam = z * (np.linalg.inv(self.K) @ np.array([u,v,1]).T)
             fwd_offset = obs_cam[2] * self.v_heading
@@ -141,12 +142,12 @@ class GradientAngle(Node):
     # ----- gradients -----
 
     def U_att_grad(self, alpha=1.0):
-        if self.r_angle and self.r_pos is not None:
+        if self.r_angle is not None and self.r_pos is not None:
             grad = alpha * (self.r_pos - self.target)
             return grad
     
     def U_rep_grad(self, radius=250, beta=1.0):
-        if self.r_angle and self.r_pos is not None:
+        if self.r_angle is not None and self.r_pos is not None:
             d = np.linalg.norm(self.r_pos - self.obs_pos)
             if d <= radius:
                 grad = -beta * ((1 / d) - (1 / radius)) * ((self.r_pos - self.obs_pos)/d**3)
@@ -156,24 +157,52 @@ class GradientAngle(Node):
     
     # note: this is not the gradient angle, but rather the angle between
     #       the gradient and the heading direction.
-    def calc_grad_angle(self):
-        unit = lambda u: u/np.linalg.norm(u)
+    # def calc_grad_angle(self):
+    #     unit = lambda u: u/np.linalg.norm(u)
 
-        if self.r_angle and self.r_pos is not None:
-            gradient = -self.U_att_grad()
-            if self.obs_pos is not None:
-                gradient -= self.U_rep_grad()
-            self.gradient = gradient
+    #     if self.r_angle is not None and self.r_pos is not None:
+    #         gradient = -self.U_att_grad()
+    #         if self.obs_pos is not None:
+    #             gradient -= self.U_rep_grad()
+    #         self.gradient = gradient
 
-            cos_a = unit(self.v_heading).T @ unit(self.gradient)
-            angle = np.arccos(cos_a)
+    #         cos_a = unit(self.v_heading).T @ unit(self.gradient)
+    #         angle = np.arccos(cos_a)
 
-            h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
-            g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
-            cross = np.cross(h3, g3)
-            angle = -angle if cross[-1]<=0.0 else angle
+    #         h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
+    #         g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
+    #         cross = np.cross(h3, g3)
+    #         angle = -angle if cross[-1]<=0.0 else angle
 
-            return angle
+    #         return angle
+
+        def calc_grad_angle(self):
+            def unit(u):
+                n = np.linalg.norm(u)
+                if n < 1e-6:
+                    return None
+                return u / n
+
+            if self.r_angle is not None and self.r_pos is not None:
+                gradient = -self.U_att_grad()
+                if self.obs_pos is not None:
+                    gradient -= self.U_rep_grad()
+                self.gradient = gradient
+
+                u_grad = unit(self.gradient)
+                u_head = unit(self.v_heading)
+                if u_grad is None or u_head is None:
+                    return 0.0  # no meaningful direction
+
+                cos_a = np.clip(u_head.T @ u_grad, -1.0, 1.0)
+                angle = np.arccos(cos_a)
+
+                h3 = np.array([self.v_heading[0], self.v_heading[1], 0.0])
+                g3 = np.array([self.gradient[0], self.gradient[1], 0.0])
+                cross = np.cross(h3, g3)
+                angle = -angle if cross[-1] <= 0.0 else angle
+
+                return angle
 
 
 def main(ros_args=None):

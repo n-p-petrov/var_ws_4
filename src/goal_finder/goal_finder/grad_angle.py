@@ -122,7 +122,7 @@ class GradientAngle(Node):
     
     def timer_callback(self):
         if self.r_angle and self.r_pos is not None:
-            self.get_logger().info(f"Grad delta: {self.grad_angle}")
+            # self.get_logger().info(f"Grad delta: {self.grad_angle}")
             self.grad_angle = self.calc_grad_angle()
         self.publish_state()
     
